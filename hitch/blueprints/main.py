@@ -1,6 +1,5 @@
 import math
 import random
-import re
 from datetime import datetime
 
 import pandas as pd
@@ -13,7 +12,6 @@ from flask import (
 )
 from flask_security import current_user
 
-from hitch.extensions import security
 from hitch.helpers import get_db
 
 main_bp = Blueprint("main", __name__)
