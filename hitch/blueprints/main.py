@@ -29,11 +29,6 @@ def experience():
     assert rating in range(1, 6)
     comment = None if data["comment"] == "" else data["comment"]
     assert comment is None or len(comment) < 10000
-    nickname = data["nickname"] if re.match(r"^\w{1,32}$", data["nickname"]) else None
-
-    # do not submit review if nickname is taken
-    if security.datastore.find_user(username=nickname):
-        return redirect("/#failed")
 
     signal = data["signal"] if data["signal"] != "null" else None
     assert signal in ["thumb", "sign", "ask", "ask-sign", None]
@@ -76,7 +71,7 @@ def experience():
                 "rating": rating,
                 "wait": wait,
                 "comment": comment,
-                "nickname": nickname,
+                "nickname": None,
                 "datetime": now,
                 "ip": ip,
                 "reviewed": False,
