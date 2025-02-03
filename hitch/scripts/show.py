@@ -167,10 +167,16 @@ places["wait"] = points[~points.wait.isnull()].groupby(["lat", "lon"]).wait.mean
 places["distance"] = points[~points.distance.isnull()].groupby(["lat", "lon"]).distance.mean().fillna("", inplace=True)
 places["text"] = groups.text.apply(lambda t: "<hr>".join(t.dropna()))
 
-places["review_users"] = points.dropna(subset=["text", "hitchhiker"]).groupby(["lat", "lon"]).hitchhiker.unique().apply(list).fillna("", inplace=True)
+places["review_users"] = (
+    points.dropna(subset=["text", "hitchhiker"]).groupby(["lat", "lon"]).hitchhiker.unique().apply(list).fillna("", inplace=True)
+)
 
-places["dest_lats"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lat.apply(list).fillna("", inplace=True)
-places["dest_lons"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lon.apply(list).fillna("", inplace=True)
+places["dest_lats"] = (
+    points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lat.apply(list).fillna("", inplace=True)
+)
+places["dest_lons"] = (
+    points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lon.apply(list).fillna("", inplace=True)
+)
 
 places.reset_index(inplace=True)
 places.sort_values("rating", inplace=True, ascending=False)
