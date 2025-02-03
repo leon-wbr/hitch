@@ -9,6 +9,7 @@ import folium.plugins
 import networkx
 import numpy as np
 import pandas as pd
+import simplejson
 
 from hitch.helpers import get_bearing, get_db, get_dirs, haversine_np
 
@@ -163,20 +164,14 @@ groups = points.groupby(["lat", "lon"])
 
 places = groups[["country"]].first()
 places["rating"] = groups.rating.mean().round()
-places["wait"] = points[~points.wait.isnull()].groupby(["lat", "lon"]).wait.mean().fillna("", inplace=True)
-places["distance"] = points[~points.distance.isnull()].groupby(["lat", "lon"]).distance.mean().fillna("", inplace=True)
+places["wait"] = points[~points.wait.isnull()].groupby(["lat", "lon"]).wait.mean()
+places["distance"] = points[~points.distance.isnull()].groupby(["lat", "lon"]).distance.mean()
 places["text"] = groups.text.apply(lambda t: "<hr>".join(t.dropna()))
 
-places["review_users"] = (
-    points.dropna(subset=["text", "hitchhiker"]).groupby(["lat", "lon"]).hitchhiker.unique().apply(list).fillna("", inplace=True)
-)
+places["review_users"] = points.dropna(subset=["text", "hitchhiker"]).groupby(["lat", "lon"]).hitchhiker.unique().apply(list)
 
-places["dest_lats"] = (
-    points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lat.apply(list).fillna("", inplace=True)
-)
-places["dest_lons"] = (
-    points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lon.apply(list).fillna("", inplace=True)
-)
+places["dest_lats"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lat.apply(list)
+places["dest_lons"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lon.apply(list)
 
 places.reset_index(inplace=True)
 places.sort_values("rating", inplace=True, ascending=False)
@@ -197,7 +192,7 @@ def generate_json_data(places, filename):
         ]
     ].to_dict(orient="records")
     with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        f.write(simplejson.dumps(data, ignore_nan=True))
 
 
 logger.info("Generating JSON data files")
@@ -212,20 +207,20 @@ generate_json_data(places_new, os.path.join(dirs["dist"], "data_new.json"))
 recent = points.dropna(subset=["datetime"]).sort_values("datetime", ascending=False).iloc[:1000]
 recent["url"] = "https://hitchmap.com/#" + recent.lat.astype(str) + "," + recent.lon.astype(str)
 recent["text"] = points.comment.fillna("") + " " + points.extra_text.fillna("")
-recent["hitchhiker"] = recent.hitchhiker.str.replace("://", "", regex=False).fillna("", inplace=True)
-recent["distance"] = recent["distance"].round(1).fillna(0, inplace=True)
+recent["hitchhiker"] = recent.hitchhiker.str.replace("://", "", regex=False)
+recent["distance"] = recent["distance"].round(1)
 recent["datetime"] = recent["datetime"].astype(str)
 recent["datetime"] += np.where(~recent.ride_datetime.isnull(), " 🕒", "")
 
 recent_data = recent[["url", "country", "datetime", "hitchhiker", "rating", "distance", "text"]].to_dict(orient="records")
 with open(os.path.join(dirs["dist"], "data_recent.json"), "w", encoding="utf-8") as f:
-    json.dump(recent_data, f, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        f.write(simplejson.dumps(recent_data, ignore_nan=True))
 
 duplicates["from_url"] = "https://hitchmap.com/#" + duplicates.from_lat.astype(str) + "," + duplicates.from_lon.astype(str)
 duplicates["to_url"] = "https://hitchmap.com/#" + duplicates.to_lat.astype(str) + "," + duplicates.to_lon.astype(str)
 duplicates_data = duplicates[["id", "from_url", "to_url", "distance", "reviewed", "accepted"]].to_dict(orient="records")
 with open(os.path.join(dirs["dist"], "data_duplicates.json"), "w", encoding="utf-8") as f:
-    json.dump(duplicates_data, f, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        f.write(simplejson.dumps(duplicates_data, ignore_nan=True))
 
 
 # Generate HTML files
@@ -242,7 +237,7 @@ def generate_html(outname, places):
             point, 
             {
                 radius: 5, 
-                weight: 1 + (row[6].length > 2), 
+                weight: 1 + (row[6]?.length > 2), 
                 fillOpacity: opacity, 
                 color: 'black', 
                 fillColor: color, 
@@ -254,11 +249,11 @@ def generate_html(outname, places):
            handleMarkerClick(marker, point, e)
         })
 
-        if (row[6].length >= 3) {
+        if (row[6]?.length >= 3) {
             marker.on('add', _ => setTimeout(_ => marker.bringToFront(), 0))
         }
 
-        if (row[7].length) destinationMarkers.push(marker)
+        if (row[7]?.length) destinationMarkers.push(marker)
         allMarkers.push(marker)
 
         return marker;
