@@ -1,6 +1,12 @@
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
 html {
     font-size: 12px;
 }
+
 .leaflet-control-attribution {
     font-size: 11px;
 }
@@ -22,6 +28,11 @@ input[type=radio] + label {
     margin-left: -5px;
     padding-left: 5px;
 }
+
+#map {
+    height: 100%;
+}
+
 .sidebar {
     line-height: 1.5;
     font-size: 19px;
