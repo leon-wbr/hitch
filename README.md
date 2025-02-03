@@ -18,7 +18,7 @@ Read more [here](https://hitchwiki.org/en/Hitchwiki:Maps).
 
 ### Fork and Divergence
 
-This repository, [`Hitchwiki/hitchmap`](https://github.com/Hitchwiki/hitchmap), is a fork of [`bobjesvla/hitch`](https://github.com/bobjesvla/hitch). While both projects share a common origin, they have since taken different development paths. At this stage, it remains uncertain which repository will emerge as the mainline project. However, we remain open to collaboration and potential reconciliation of efforts in the future.
+This repository, [`Hitchwiki/hitchmap`](https://github.com/Hitchwiki/hitchmap), is a fork of [`bobjesvla/hitch`](https://github.com/bobjesvla/hitch). While both projects share a common origin, they have since taken different development paths. At this stage, it remains uncertain which repository will emerge as the mainline project. However, we remain open to collaboration and potential reconciliation of efforts.
 
 For contributors and users, we recommend reviewing both repositories to determine which best fits your needs.
 
