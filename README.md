@@ -54,7 +54,7 @@ curl https://hitchmap.com/dump.sqlite > db/points.sqlite
 Initialize and run the Flask server:
 
 ```bash
-flask --app hitch generate-all
+flask --app hitch init
 flask --app hitch generate-all
 flask run
 ```
