@@ -9,6 +9,7 @@ from flask import (
     Blueprint,
     current_app,
     redirect,
+    render_template,
     request,
 )
 from flask_security import current_user
@@ -17,6 +18,12 @@ from hitch.extensions import security
 from hitch.helpers import get_db
 
 main_bp = Blueprint("main", __name__)
+
+
+# Example of map with JSON data
+@main_bp.route("/map")
+def map():
+    return render_template("map.jinja2")
 
 
 # Log experience (reviews)

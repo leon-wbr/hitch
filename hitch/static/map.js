@@ -1,7 +1,17 @@
+// Register ServiceWorker
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
 }
 
+// Initialize Map
+var map = L.map('map').setView([51.505, -0.09], 13);
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+
+// Helpers and variables
 var $$ = function (e) { return document.querySelector(e) }
 
 var addSpotPoints = [],
@@ -15,6 +25,7 @@ var addSpotPoints = [],
 
 var bars = document.querySelectorAll('.sidebar, .topbar')
 
+// Functions
 function maybeReportDuplicate(marker) {
     if (document.body.classList.contains('reporting-duplicate')) {
         var row = marker.options._row, point = marker.getLatLng()
@@ -78,8 +89,6 @@ function bar(selector) {
     if (selector)
         $$(selector).classList.add('visible')
 }
-
-var map = window[$$('.folium-map').id]
 
 var AddSpotButton = L.Control.extend({
     options: {
