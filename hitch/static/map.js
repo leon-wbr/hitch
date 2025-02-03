@@ -8,7 +8,7 @@ var map = L.map('map').setView([51.505, -0.09], 13);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a>'
 }).addTo(map);
 
 // Helpers and variables
@@ -452,10 +452,6 @@ function clear() {
     updateAddSpotLine()
     document.body.classList.remove('adding-spot', 'reporting-duplicate', 'menu')
 }
-
-$$('.leaflet-control-attribution').innerHTML = `
-    © <a href=https://openstreetmap.org/copyright>OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a> contributors
-`
 
 function restoreView() {
     if (!storageAvailable('localStorage')) {
