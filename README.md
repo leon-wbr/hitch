@@ -1,3 +1,15 @@
+<!-- PROJECT SHIELDS -->
+<!--
+*** Markdown "reference style" links for readability.
+*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
+*** See the bottom of this document for the declaration of the reference variables
+*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
+*** https://www.markdownguide.org/basic-syntax/#reference-style-links
+-->
+[![Contributors][contributors-shield]][contributors-url]
+[![Issues][issues-shield]][issues-url]
+[![Unlicense License][license-shield]][license-url]
+
 <!-- ABOUT THE PROJECT -->
 <div align="center">
   <h3 align="center">Hitchmap</h3>
@@ -5,9 +17,9 @@
     The map to hitchhiking the world.
     <br />
     <br />
-    <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/Hitchwiki/hitchmap/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
-    <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/Hitchwiki/hitchmap/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
@@ -79,3 +91,18 @@ url = {https://hitchmap.com},
 ## License
 
 The software provided in this repository is licensed under AGPL 3.0. The Hitchmap database is licensed under the ODBL, the license used by OpenStreetMap.
+
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[contributors-shield]: https://img.shields.io/github/contributors/Hitchwiki/hitchmap.svg?style=for-the-badge
+[contributors-url]: https://github.com/Hitchwiki/hitchmap/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/Hitchwiki/hitchmap.svg?style=for-the-badge
+[forks-url]: https://github.com/Hitchwiki/hitchmap/network/members
+[stars-shield]: https://img.shields.io/github/stars/Hitchwiki/hitchmap.svg?style=for-the-badge
+[stars-url]: https://github.com/Hitchwiki/hitchmap/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Hitchwiki/hitchmap.svg?style=for-the-badge
+[issues-url]: https://github.com/Hitchwiki/hitchmap/issues
+[license-shield]: https://img.shields.io/github/license/Hitchwiki/hitchmap.svg?style=for-the-badge
+[license-url]: https://github.com/Hitchwiki/hitchmap/blob/master/LICENSE.txt
+[Flask]: https://img.shields.io/badge/flask-000000?style=for-the-badge&logo=flask&logoColor=white
+[Flask-url]: https://flask.palletsprojects.com/en/stable/
