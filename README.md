@@ -27,6 +27,7 @@
 
 Read more [here](https://hitchwiki.org/en/Hitchwiki:Maps).
 
+Join the conversation about a map for hitchhiking in our [Signal Chat](https://signal.group/#CjQKIDyYgIxcOUCEPYu8-JawC_tv1bcgkAhvbISRZkN45MMVEhCtydy3DOOCKEAE_tsR6g9s).
 
 ### Fork and Divergence
 
@@ -39,15 +40,12 @@ For contributors and users, we recommend reviewing both repositories to determin
 
 Set up Python virtual environment, install requirements and download the latest database dump:
 
+Works with Python 3.12.6
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-curl https://hitchmap.com/dump.sqlite > db/points.sqlite
-
-OR
-
-conda install folium==0.16.0 networkx==3.2.1
 curl https://hitchmap.com/dump.sqlite > db/points.sqlite
 ```
 
@@ -60,22 +58,6 @@ flask run
 ```
 
 In order to run the project continuously, use `cron.sh` to set up corresponding cronjobs to update the views and `hitchmap.conf` as a basic NGINX configuration.
-
-## Contributing
-
-Contributions are greatly appreciated and we are happy to help you get started with your first feature or bug fix.
-
-Join the conversation about a map for hitchhiking in our [Signal Chat](https://signal.group/#CjQKIDyYgIxcOUCEPYu8-JawC_tv1bcgkAhvbISRZkN45MMVEhCtydy3DOOCKEAE_tsR6g9s).
-
-File an [issue](https://github.com/bopjesvla/hitch/issues) if you have a feature request or found a bug.
-
-Perform a [pull request](https://github.com/bopjesvla/hitch/pulls) from your [fork](https://github.com/bopjesvla/hitch/fork) of the repository if you solved an issue. (It's best to file an issue first so we can discuss it and reference it in the PR.)
-
-### Linting
-
-We use Ruff for linting [https://docs.astral.sh/ruff/](https://docs.astral.sh/ruff/). The settings can be found in `ruff.toml`.
-
-To configure automatic linting for VS Code check out the extension [https://github.com/astral-sh/ruff-vscode](https://github.com/astral-sh/ruff-vscode).
 
 ## Data
 If you find the data collected and provided by hitchmap.com helpful, feel free to cite it using:
