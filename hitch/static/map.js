@@ -1,15 +1,7 @@
 // Register ServiceWorker
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
+    // navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
 }
-
-// Initialize Map
-var map = L.map('map').setView([51.505, -0.09], 13);
-
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a>'
-}).addTo(map);
 
 // Helpers and variables
 var $$ = function (e) { return document.querySelector(e) }
@@ -21,9 +13,73 @@ var addSpotPoints = [],
     filterDestLineGroup = null,
     filterMarkerGroup = null,
     spotMarker,
-    destMarker
+    destMarker,
+    map;
 
 var bars = document.querySelectorAll('.sidebar, .topbar')
+
+// Initialize Map
+function initializeMap() {
+  var map = L.map("map", {
+    center: [51.505, -0.09],
+    zoom: 13,
+    preferCanvas: true,
+  }).whenReady(function () {
+    // Load markers from JSON
+    fetch("/data.json")
+      .then((response) => response.json())
+      .then((data) => {
+        data.forEach((m) => {
+          var color = {
+            1: "red",
+            2: "orange",
+            3: "yellow",
+            4: "lightgreen",
+            5: "lightgreen",
+          }[m.rating];
+          var opacity = { 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8 }[m.rating];
+          var coords = [m.lat, m.lon];
+
+          var marker = L.circleMarker(coords, {
+            radius: 5,
+            weight: 1 + (m.review_users?.length > 2),
+            fillOpacity: opacity,
+            color: "black",
+            fillColor: color,
+            _row: m,
+          });
+
+          marker.on("click", function (e) {
+            handleMarkerClick(marker, coords, e);
+          });
+
+          if (m.review_users?.length >= 3) {
+            marker.on("add", (_) =>
+              setTimeout((_) => marker.bringToFront(), 0)
+            );
+          }
+
+          if (m.dest_lats?.length) {
+            destinationMarkers.push(marker);
+          }
+
+          marker.addTo(map);
+          allMarkers.push(marker);
+        });
+      })
+      .catch((error) => console.error("Error loading markers:", error));
+  });
+
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a>',
+  }).addTo(map);
+
+  return map;
+}
+
+var map = $$('.folium-map') ? window[$$('.folium-map').id] : initializeMap();
 
 // Functions
 function maybeReportDuplicate(marker) {
@@ -60,6 +116,7 @@ function handleMarkerClick(marker, point, e) {
 }
 
 var markerClick = function (marker) {
+    console.log(marker);
     var row = marker.options._row, point = marker.getLatLng()
     active = [marker]
 
@@ -468,8 +525,6 @@ if (!window.location.hash.includes(',')) // we'll center on coord
         map.fitBounds([[-35, -40], [60, 40]])
 if (map.getZoom() > 17 && window.location.hash != '#success-duplicate') map.setZoom(17);
 
-$$('.folium-map').focus()
-
 function exportAsGPX() {
     var script = document.createElement("script");
     script.src = 'https://cdn.jsdelivr.net/npm/togpx@0.5.4/togpx.js';
@@ -765,7 +820,6 @@ function navigate() {
         bar('.sidebar.filters')
     }
     else if (args.length == 2 && !isNaN(args[0])) {
-        console.log('YEAH')
         clear()
         let lat = +args[0], lon = +args[1]
         for (let m of allMarkers) {
