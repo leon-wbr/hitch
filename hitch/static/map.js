@@ -498,14 +498,6 @@ function exportAsGPX() {
     document.body.appendChild(script)
 }
 
-// $$('.report-button').onclick = _ => $$('.report-options').classList.toggle('.visible')
-// $$('.report-button').onblur = _ => $$('.report-options').classList.remove('.visible')
-
-// validate add spot form input
-document.getElementById('spot-form').addEventListener('submit', function(event) {
-// no operation
-});
-
 const knob = document.getElementById('knob');
 const knobLine = document.getElementById('knobLine');
 const knobCone = document.getElementById('knobCone');
