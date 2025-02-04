@@ -30,7 +30,7 @@ async function initializeMap() {
     });
 
     map.whenReady(async () => {
-      await loadMarkers(map);
+      await loadMarkers(map).catch(reject);
       resolve(map);
     });
 
