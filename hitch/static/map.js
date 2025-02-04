@@ -746,6 +746,12 @@ function addSpotStep(e) {
         var uname = $$("input[name=username]");
         uname.value = localStorage.getItem("nick");
         uname.onchange = (e) => localStorage.setItem("nick", uname.value);
+
+        // for (let field of ['males', 'females', 'others', 'signal']) {
+        //     let el = $$(`input[name=${field}]`)
+        //     el.value = localStorage.getItem(field) || el.value
+        //     el.onchange = e => localStorage.setItem(field, uname.value)
+        // }
       }
     }
   } else if (e.target.innerText == "Cancel") {
