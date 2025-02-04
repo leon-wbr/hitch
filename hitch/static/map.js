@@ -20,7 +20,7 @@ var bars = document.querySelectorAll(".sidebar, .topbar");
 
 // Initialize Map
 async function initializeMap() {
-  if ($$(".folium-map")) return $$(".folium-map");
+  if ($$(".folium-map")) return window[$$(".folium-map").id];
 
   return new Promise((resolve, reject) => {
     map = L.map("map", {
@@ -64,7 +64,20 @@ async function loadMarkers(map) {
           fillOpacity: opacity,
           color: "black",
           fillColor: color,
-          _row: m,
+          _row:
+            Object.prototype.toString.call(m) === "[object Array]"
+              ? m
+              : [
+                  m.lat,
+                  m.lon,
+                  m.rating,
+                  m.text,
+                  m.wait,
+                  m.distance,
+                  m.review_users,
+                  m.dest_lats,
+                  m.dest_lons,
+                ],
         });
 
         marker.on("click", (e) => handleMarkerClick(marker, coords, e));
@@ -84,7 +97,7 @@ async function loadMarkers(map) {
 
 // Initialize the map and set up event listeners
 (async () => {
-  await initializeMap();
+  map = await initializeMap();
   onReady();
   handleHashChange();
   window.onhashchange = navigate;
@@ -150,6 +163,7 @@ function setupEventListeners() {
   map.on("zoom", () =>
     document.body.classList.toggle("zoomed-out", map.getZoom() < 9)
   );
+
   clearFilters.onclick = () => {
     clearParams();
     navigateHome();
@@ -458,22 +472,7 @@ function handleMarkerClick(marker, point, e) {
 }
 
 function markerClick(marker) {
-  // Marker can be either an array or an object
-  var markerItem = marker.options._row;
-  var row =
-    Object.prototype.toString.call(markerItem) === "[object Array]"
-      ? markerItem
-      : [
-          markerItem.lat,
-          markerItem.lon,
-          markerItem.rating,
-          markerItem.text,
-          markerItem.wait,
-          markerItem.distance,
-          markerItem.review_users,
-          markerItem.dest_lats,
-          markerItem.dest_lons,
-        ];
+  var row = marker.options._row;
   active = [marker];
 
   addSpotPoints = [];
