@@ -1,5 +1,4 @@
 import html
-import json
 import logging
 import os
 from string import Template
