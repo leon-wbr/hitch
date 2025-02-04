@@ -984,10 +984,16 @@ let isDragging = false,
 
 function setQueryParameter(key, value) {
   const url = new URL(window.location.href); // Get the current URL
-  if (value)
-    url.searchParams.set(key, value); // Set or update the query parameter
-  else url.searchParams.delete(key);
-  window.history.replaceState({}, "", url.toString()); // Update the URL without reloading
+
+  // Set or update the query parameter
+  if (value) {
+    url.searchParams.set(key, value);
+  } else {
+    url.searchParams.delete(key);
+  }
+
+  // Update the URL without reloading
+  window.history.replaceState({}, "", url.toString());
   navigate();
 }
 
