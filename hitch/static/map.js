@@ -11,6 +11,8 @@ var $$ = function (e) {
 var addSpotPoints = [],
   addSpotLine = null,
   active = [],
+  oldActive = [],
+  oldMarkers = [],
   destLineGroup = null,
   filterDestLineGroup = null,
   filterMarkerGroup = null,
@@ -21,67 +23,261 @@ var addSpotPoints = [],
 var bars = document.querySelectorAll(".sidebar, .topbar");
 
 // Initialize Map
-function initializeMap() {
-  var map = L.map("map", {
-    center: [51.505, -0.09],
-    zoom: 13,
-    preferCanvas: true,
-  }).whenReady(function () {
-    // Load markers from JSON
-    fetch("/data.json")
-      .then((response) => response.json())
-      .then((data) => {
-        data.forEach((m) => {
-          var color = {
-            1: "red",
-            2: "orange",
-            3: "yellow",
-            4: "lightgreen",
-            5: "lightgreen",
-          }[m.rating];
-          var opacity = { 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8 }[m.rating];
-          var coords = [m.lat, m.lon];
+async function initializeMap() {
+  if ($$(".folium-map")) return $$(".folium-map");
 
-          var marker = L.circleMarker(coords, {
-            radius: 5,
-            weight: 1 + (m.review_users?.length > 2),
-            fillOpacity: opacity,
-            color: "black",
-            fillColor: color,
-            _row: m,
+  return new Promise((resolve, reject) => {
+    var map = L.map("map", {
+      center: [0, 0],
+      zoom: 1,
+      preferCanvas: true,
+    }).whenReady(() => {
+      // Load markers from JSON
+      fetch("/data.json")
+        .then((response) => response.json())
+        .then((data) => {
+          data.forEach((m) => {
+            var color = {
+              1: "red",
+              2: "orange",
+              3: "yellow",
+              4: "lightgreen",
+              5: "lightgreen",
+            }[m.rating];
+            var opacity = { 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8 }[m.rating];
+            var coords = new L.latLng(m.lat, m.lon);
+
+            var marker = L.circleMarker(coords, {
+              radius: 5,
+              weight: 1 + (m.review_users?.length > 2),
+              fillOpacity: opacity,
+              color: "black",
+              fillColor: color,
+              _row: m,
+            });
+
+            marker.on("click", (e) => {
+              handleMarkerClick(marker, coords, e);
+            });
+
+            if (m.review_users?.length >= 3) {
+              marker.on("add", (_) =>
+                setTimeout((_) => marker.bringToFront(), 0)
+              );
+            }
+
+            if (m.dest_lats?.length) {
+              destinationMarkers.push(marker);
+            }
+
+            marker.addTo(map);
+            allMarkers.push(marker);
           });
 
-          marker.on("click", function (e) {
-            handleMarkerClick(marker, coords, e);
-          });
-
-          if (m.review_users?.length >= 3) {
-            marker.on("add", (_) =>
-              setTimeout((_) => marker.bringToFront(), 0)
-            );
-          }
-
-          if (m.dest_lats?.length) {
-            destinationMarkers.push(marker);
-          }
-
-          marker.addTo(map);
-          allMarkers.push(marker);
+          resolve(map);
+        })
+        .catch((error) => {
+          console.error("Error loading markers:", error);
+          reject(error);
         });
-      })
-      .catch((error) => console.error("Error loading markers:", error));
+    });
+
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a>',
+    }).addTo(map);
+  });
+}
+
+(async () => {
+  map = await initializeMap();
+
+  onReady();
+
+  if (!window.location.hash.includes(",")) {
+    if (!restoreView.apply(map)) {
+      // we'll center on coord
+      map.fitBounds([
+        [-35, -40],
+        [60, 40],
+      ]);
+    }
+  }
+
+  if (window.location.hash == "#success") {
+    history.replaceState(null, null, " ");
+    bar(".sidebar.success");
+  }
+
+  if (window.location.hash == "#success-duplicate") {
+    history.replaceState(null, null, " ");
+    bar(".sidebar.success-duplicate");
+  }
+
+  if (window.location.hash == "#failed") {
+    history.replaceState(null, null, " ");
+    bar(".sidebar.failed");
+  }
+
+  if (window.location.hash == "#registered") {
+    history.replaceState(null, null, " ");
+    bar(".sidebar.registered");
+  }
+
+  if (window.location.pathname === "/hitchhiking.html") {
+    map.addControl(new HeatmapInfoButton());
+    $$(".filter-button").remove();
+    $$(".add-spot").remove();
+  }
+
+  if (map.getZoom() > 17 && window.location.hash != "#success-duplicate")
+    map.setZoom(17);
+
+  window.onhashchange = navigate;
+  navigate();
+})();
+
+// onReady
+function onReady() {
+  // Location search
+  var geocoderOpts = {
+    collapsed: false,
+    defaultMarkGeocode: false,
+    position: "topleft",
+    provider: "photon",
+    placeholder: "Jump to city, search comments",
+    zoom: 11,
+  };
+
+  var customGeocoder = L.Control.Geocoder.photon();
+  geocoderOpts["geocoder"] = customGeocoder;
+
+  let geocoderController = L.Control.geocoder(geocoderOpts).addTo(map);
+
+  let geocoderInput = $$(".leaflet-control-geocoder input");
+  geocoderInput.type = "search";
+
+  geocoderController.on("markgeocode", function (e) {
+    var zoom = geocoderOpts["zoom"] || map.getZoom();
+    map.setView(e.geocode.center, zoom);
+    $$(".leaflet-control-geocoder input").value = "";
   });
 
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution:
-      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a>',
-  }).addTo(map);
+  // Add interaction buttons to the map
+  map.addControl(new MenuButton());
+  map.addControl(new AddSpotButton());
+  map.addControl(new AccountButton());
+  map.addControl(new FilterButton());
+
+  var zoom = $$(".leaflet-control-zoom");
+  zoom.parentNode.appendChild(zoom);
+
+  $$("#sb-close").onclick = function (e) {
+    navigateHome();
+  };
+
+  $$("a.step2-help").onclick = (e) => alert(e.target.title);
+
+  $$(".report-dup").onclick = (e) =>
+    document.body.classList.add("reporting-duplicate");
+
+  $$(".topbar.duplicate button").onclick = (e) =>
+    document.body.classList.remove("reporting-duplicate");
+
+  map.on("move", updateAddSpotLine);
+
+  bars.forEach((bar) => {
+    if (bar.classList.contains("spot")) bar.onclick = addSpotStep;
+  });
+
+  map.on("click", (e) => {
+    var added = false;
+
+    if (window.innerWidth < 780) {
+      var layerPoint = map.latLngToLayerPoint(e.latlng);
+      let markers = document.body.classList.contains("filtering")
+        ? filterMarkerGroup
+        : allMarkers;
+      var circles = markers.sort(
+        (a, b) =>
+          a.getLatLng().distanceTo(e.latlng) -
+          b.getLatLng().distanceTo(e.latlng)
+      );
+      if (
+        circles[0] &&
+        map.latLngToLayerPoint(circles[0].getLatLng()).distanceTo(layerPoint) <
+          20
+      ) {
+        added = true;
+        circles[0].fire("click", e);
+      }
+    }
+
+    if (
+      !added &&
+      !document.body.classList.contains("reporting-duplicate") &&
+      $$(".sidebar.visible") &&
+      !$$(".sidebar.spot-form-container.visible")
+    ) {
+      navigateHome();
+    }
+
+    L.DomEvent.stopPropagation(e);
+  });
+
+  map.on("zoom", (e) => {
+    document.body.classList.toggle("zoomed-out", map.getZoom() < 9);
+  });
+
+  clearFilters.onclick = () => {
+    clearParams();
+    navigateHome();
+  };
+
+  knob.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    updateRotation(e);
+    const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
+    const normalizedAngle = (angle + 360) % 360; // Normalize angle
+    setQueryParameter("direction", normalizedAngle);
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (isDragging) {
+      updateRotation(e);
+      const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
+      const normalizedAngle = (angle + 360) % 360; // Normalize angle
+      setQueryParameter("direction", normalizedAngle);
+    }
+  });
+
+  window.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
+
+  spreadInput.addEventListener("input", updateConeSpread);
+  knobToggle.addEventListener("input", () =>
+    setQueryParameter("mydirection", knobToggle.checked)
+  );
+  userFilter.addEventListener("input", () =>
+    setQueryParameter("user", userFilter.value)
+  );
+  textFilter.addEventListener("input", () =>
+    setQueryParameter("text", textFilter.value)
+  );
+  distanceFilter.addEventListener("input", () =>
+    setQueryParameter("mindistance", distanceFilter.value)
+  );
+
+  let filterPane = map.createPane("filtering");
+  filterPane.style.zIndex = 450;
+
+  map.createPane("arrowlines");
+  filterPane.style.zIndex = 1450;
 
   return map;
 }
-
-var map = $$(".folium-map") ? window[$$(".folium-map").id] : initializeMap();
 
 // Functions
 function maybeReportDuplicate(marker) {
@@ -109,9 +305,13 @@ function maybeReportDuplicate(marker) {
 }
 
 function summaryText(row) {
-  return `Rating: ${row[2].toFixed(0)}/5
-    Waiting time: ${Number.isNaN(row[4]) ? "-" : row[4].toFixed(0) + " min"}
-    Ride distance: ${Number.isNaN(row[5]) ? "-" : row[5].toFixed(0) + " km"}`;
+  return `Rating: ${row[2] && row[2].toFixed(0)}/5
+    Waiting time: ${
+      !row[4] || Number.isNaN(row[4]) ? "-" : row[4].toFixed(0) + " min"
+    }
+    Ride distance: ${
+      !row[5] || Number.isNaN(row[5]) ? "-" : row[5].toFixed(0) + " km"
+    }`;
 }
 
 function handleMarkerClick(marker, point, e) {
@@ -124,10 +324,23 @@ function handleMarkerClick(marker, point, e) {
   L.DomEvent.stopPropagation(e);
 }
 
-var markerClick = function (marker) {
-  console.log(marker);
-  var row = marker.options._row,
-    point = marker.getLatLng();
+function markerClick(marker) {
+  // Marker can be either an array or an object
+  var markerItem = marker.options._row;
+  var row =
+    Object.prototype.toString.call(markerItem) === "[object Array]"
+      ? markerItem
+      : [
+          markerItem.lat,
+          markerItem.lon,
+          markerItem.rating,
+          markerItem.text,
+          markerItem.wait,
+          markerItem.distance,
+          markerItem.review_users,
+          markerItem.dest_lats,
+          markerItem.dest_lons,
+        ];
   active = [marker];
 
   addSpotPoints = [];
@@ -145,14 +358,12 @@ var markerClick = function (marker) {
     $$("#spot-summary").innerText = summaryText(row);
 
     $$("#spot-text").innerHTML = row[3];
-    if (!row[3] && Number.isNaN(row[5]))
+    if (!row[3] && (!row[5] || Number.isNaN(row[5])))
       $$("#extra-text").innerHTML =
         "No comments/ride info. To hide spots like this, check out the <a href=/light.html>lightweight map</a>.";
     else $$("#extra-text").innerHTML = "";
   }, 100);
-
-  console.log(row);
-};
+}
 
 function bar(selector) {
   bars.forEach(function (el) {
@@ -288,57 +499,6 @@ var HeatmapInfoButton = L.Control.extend({
   },
 });
 
-////// Define the search bar for the map //////
-var geocoderOpts = {
-  collapsed: false,
-  defaultMarkGeocode: false,
-  position: "topleft",
-  provider: "photon",
-  placeholder: "Jump to city, search comments",
-  zoom: 11,
-};
-
-var customGeocoder = L.Control.Geocoder.photon();
-geocoderOpts["geocoder"] = customGeocoder;
-
-let geocoderController = L.Control.geocoder(geocoderOpts).addTo(map);
-
-let geocoderInput = $$(".leaflet-control-geocoder input");
-geocoderInput.type = "search";
-
-let oldMarkers = [];
-
-geocoderController.on("markgeocode", function (e) {
-  var zoom = geocoderOpts["zoom"] || map.getZoom();
-  map.setView(e.geocode.center, zoom);
-  $$(".leaflet-control-geocoder input").value = "";
-});
-
-////// Add interaction buttons to the map //////
-map.addControl(new MenuButton());
-map.addControl(new AddSpotButton());
-map.addControl(new AccountButton());
-map.addControl(new FilterButton());
-if (window.location.pathname === "/hitchhiking.html") {
-  map.addControl(new HeatmapInfoButton());
-  $$(".filter-button").remove();
-  $$(".add-spot").remove();
-}
-
-var zoom = $$(".leaflet-control-zoom");
-zoom.parentNode.appendChild(zoom);
-
-$$("#sb-close").onclick = function (e) {
-  navigateHome();
-};
-
-$$("a.step2-help").onclick = (e) => alert(e.target.title);
-
-$$(".report-dup").onclick = (e) =>
-  document.body.classList.add("reporting-duplicate");
-$$(".topbar.duplicate button").onclick = (e) =>
-  document.body.classList.remove("reporting-duplicate");
-
 function updateAddSpotLine() {
   if (addSpotLine) {
     map.removeLayer(addSpotLine);
@@ -349,9 +509,7 @@ function updateAddSpotLine() {
   }
 }
 
-map.on("move", updateAddSpotLine);
-
-var addSpotStep = function (e) {
+function addSpotStep(e) {
   if (e.target.tagName != "BUTTON") return;
   if (e.target.innerText == "Done") {
     let center = map.getCenter();
@@ -457,49 +615,7 @@ var addSpotStep = function (e) {
   }
 
   document.body.classList.toggle("adding-spot", addSpotPoints.length > 0);
-};
-
-bars.forEach((bar) => {
-  if (bar.classList.contains("spot")) bar.onclick = addSpotStep;
-});
-
-map.on("click", (e) => {
-  var added = false;
-
-  if (window.innerWidth < 780) {
-    var layerPoint = map.latLngToLayerPoint(e.latlng);
-    let markers = document.body.classList.contains("filtering")
-      ? filterMarkerGroup
-      : allMarkers;
-    var circles = markers.sort(
-      (a, b) =>
-        a.getLatLng().distanceTo(e.latlng) - b.getLatLng().distanceTo(e.latlng)
-    );
-    if (
-      circles[0] &&
-      map.latLngToLayerPoint(circles[0].getLatLng()).distanceTo(layerPoint) < 20
-    ) {
-      added = true;
-      circles[0].fire("click", e);
-    }
-  }
-  if (
-    !added &&
-    !document.body.classList.contains("reporting-duplicate") &&
-    $$(".sidebar.visible") &&
-    !$$(".sidebar.spot-form-container.visible")
-  ) {
-    navigateHome();
-  }
-
-  L.DomEvent.stopPropagation(e);
-});
-
-map.on("zoom", (e) => {
-  document.body.classList.toggle("zoomed-out", map.getZoom() < 9);
-});
-
-var oldActive = [];
+}
 
 function arrowLine(from, to, opts = {}) {
   return L.polylineDecorator([from, to], {
@@ -624,16 +740,6 @@ function storageAvailable(type) {
   }
 }
 
-if (!window.location.hash.includes(","))
-  if (!restoreView.apply(map))
-    // we'll center on coord
-    map.fitBounds([
-      [-35, -40],
-      [60, 40],
-    ]);
-if (map.getZoom() > 17 && window.location.hash != "#success-duplicate")
-  map.setZoom(17);
-
 function exportAsGPX() {
   var script = document.createElement("script");
   script.src = "https://cdn.jsdelivr.net/npm/togpx@0.5.4/togpx.js";
@@ -752,52 +858,6 @@ function clearParams() {
   window.history.replaceState({}, "", newURL.toString());
   navigate();
 }
-
-clearFilters.onclick = () => {
-  clearParams();
-  navigateHome();
-};
-
-knob.addEventListener("mousedown", (e) => {
-  isDragging = true;
-  updateRotation(e);
-  const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
-  const normalizedAngle = (angle + 360) % 360; // Normalize angle
-  setQueryParameter("direction", normalizedAngle);
-});
-
-window.addEventListener("mousemove", (e) => {
-  if (isDragging) {
-    updateRotation(e);
-    const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
-    const normalizedAngle = (angle + 360) % 360; // Normalize angle
-    setQueryParameter("direction", normalizedAngle);
-  }
-});
-
-window.addEventListener("mouseup", () => {
-  isDragging = false;
-});
-
-spreadInput.addEventListener("input", updateConeSpread);
-knobToggle.addEventListener("input", () =>
-  setQueryParameter("mydirection", knobToggle.checked)
-);
-userFilter.addEventListener("input", () =>
-  setQueryParameter("user", userFilter.value)
-);
-textFilter.addEventListener("input", () =>
-  setQueryParameter("text", textFilter.value)
-);
-distanceFilter.addEventListener("input", () =>
-  setQueryParameter("mindistance", distanceFilter.value)
-);
-
-let filterPane = map.createPane("filtering");
-filterPane.style.zIndex = 450;
-
-let arrowlinePane = map.createPane("arrowlines");
-filterPane.style.zIndex = 1450;
 
 function updateRotation(event) {
   const rect = knob.getBoundingClientRect();
@@ -929,9 +989,6 @@ function applyParams() {
   }
 }
 
-// Initialize the cone spread and knob appearance
-applyParams();
-
 function navigate() {
   applyParams();
 
@@ -951,6 +1008,7 @@ function navigate() {
       lon = +args[1];
     for (let m of allMarkers) {
       if (m._latlng.lat === lat && m._latlng.lng === lon) {
+        console.log(map.getZoom());
         markerClick(m);
         if (map.getZoom() < 3) map.setView(m.getLatLng(), 16);
         return;
@@ -959,28 +1017,4 @@ function navigate() {
   } else {
     clear();
   }
-}
-
-window.onhashchange = navigate;
-
-navigate();
-
-if (window.location.hash == "#success") {
-  history.replaceState(null, null, " ");
-  bar(".sidebar.success");
-}
-
-if (window.location.hash == "#success-duplicate") {
-  history.replaceState(null, null, " ");
-  bar(".sidebar.success-duplicate");
-}
-
-if (window.location.hash == "#failed") {
-  history.replaceState(null, null, " ");
-  bar(".sidebar.failed");
-}
-
-if (window.location.hash == "#registered") {
-  history.replaceState(null, null, " ");
-  bar(".sidebar.registered");
 }
