@@ -4,10 +4,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // Helpers and variables
-var $$ = function (e) {
-  return document.querySelector(e);
-};
-
+var $$ = (e) => document.querySelector(e);
 var addSpotPoints = [],
   addSpotLine = null,
   active = [],
@@ -19,7 +16,6 @@ var addSpotPoints = [],
   spotMarker,
   destMarker,
   map;
-
 var bars = document.querySelectorAll(".sidebar, .topbar");
 
 // Initialize Map
@@ -27,59 +23,15 @@ async function initializeMap() {
   if ($$(".folium-map")) return $$(".folium-map");
 
   return new Promise((resolve, reject) => {
-    var map = L.map("map", {
+    map = L.map("map", {
       center: [0, 0],
       zoom: 1,
       preferCanvas: true,
-    }).whenReady(() => {
-      // Load markers from JSON
-      fetch("/data.json")
-        .then((response) => response.json())
-        .then((data) => {
-          data.forEach((m) => {
-            var color = {
-              1: "red",
-              2: "orange",
-              3: "yellow",
-              4: "lightgreen",
-              5: "lightgreen",
-            }[m.rating];
-            var opacity = { 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8 }[m.rating];
-            var coords = new L.latLng(m.lat, m.lon);
+    });
 
-            var marker = L.circleMarker(coords, {
-              radius: 5,
-              weight: 1 + (m.review_users?.length > 2),
-              fillOpacity: opacity,
-              color: "black",
-              fillColor: color,
-              _row: m,
-            });
-
-            marker.on("click", (e) => {
-              handleMarkerClick(marker, coords, e);
-            });
-
-            if (m.review_users?.length >= 3) {
-              marker.on("add", (_) =>
-                setTimeout((_) => marker.bringToFront(), 0)
-              );
-            }
-
-            if (m.dest_lats?.length) {
-              destinationMarkers.push(marker);
-            }
-
-            marker.addTo(map);
-            allMarkers.push(marker);
-          });
-
-          resolve(map);
-        })
-        .catch((error) => {
-          console.error("Error loading markers:", error);
-          reject(error);
-        });
+    map.whenReady(async () => {
+      await loadMarkers(map);
+      resolve(map);
     });
 
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -90,14 +42,204 @@ async function initializeMap() {
   });
 }
 
+// Load markers from JSON data
+async function loadMarkers(map) {
+  return fetch("/data.json")
+    .then((response) => response.json())
+    .then((data) => {
+      data.forEach((m) => {
+        var color = {
+          1: "red",
+          2: "orange",
+          3: "yellow",
+          4: "lightgreen",
+          5: "lightgreen",
+        }[m.rating];
+        var opacity = { 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8 }[m.rating];
+        var coords = new L.latLng(m.lat, m.lon);
+
+        var marker = L.circleMarker(coords, {
+          radius: 5,
+          weight: 1 + (m.review_users?.length > 2),
+          fillOpacity: opacity,
+          color: "black",
+          fillColor: color,
+          _row: m,
+        });
+
+        marker.on("click", (e) => handleMarkerClick(marker, coords, e));
+        if (m.review_users?.length >= 3)
+          marker.on("add", (_) => setTimeout((_) => marker.bringToFront(), 0));
+        if (m.dest_lats?.length) destinationMarkers.push(marker);
+
+        marker.addTo(map);
+        allMarkers.push(marker);
+      });
+    })
+    .catch((error) => {
+      console.error("Error loading markers:", error);
+      throw error;
+    });
+}
+
+// Initialize the map and set up event listeners
 (async () => {
-  map = await initializeMap();
-
+  await initializeMap();
   onReady();
+  handleHashChange();
+  window.onhashchange = navigate;
+  navigate();
+})();
 
+// Set up the map after initialization
+function onReady() {
+  setupGeocoder();
+  addMapControls();
+  setupEventListeners();
+}
+
+// Set up the geocoder for location search
+function setupGeocoder() {
+  var geocoderOpts = {
+    collapsed: false,
+    defaultMarkGeocode: false,
+    position: "topleft",
+    provider: "photon",
+    placeholder: "Jump to city, search comments",
+    zoom: 11,
+    geocoder: L.Control.Geocoder.photon(),
+  };
+
+  let geocoderController = L.Control.geocoder(geocoderOpts).addTo(map);
+  let geocoderInput = $$(".leaflet-control-geocoder input");
+  geocoderInput.type = "search";
+
+  geocoderController.on("markgeocode", function (e) {
+    var zoom = geocoderOpts.zoom || map.getZoom();
+    map.setView(e.geocode.center, zoom);
+    geocoderInput.value = "";
+  });
+}
+
+// Add custom controls to the map
+function addMapControls() {
+  map.addControl(new MenuButton());
+  map.addControl(new AddSpotButton());
+  map.addControl(new AccountButton());
+  map.addControl(new FilterButton());
+
+  var zoom = $$(".leaflet-control-zoom");
+  zoom.parentNode.appendChild(zoom);
+}
+
+// Set up various event listeners for the map and UI elements
+function setupEventListeners() {
+  $$("#sb-close").onclick = navigateHome;
+  $$("a.step2-help").onclick = (e) => alert(e.target.title);
+  $$(".report-dup").onclick = () =>
+    document.body.classList.add("reporting-duplicate");
+  $$(".topbar.duplicate button").onclick = () =>
+    document.body.classList.remove("reporting-duplicate");
+
+  map.on("move", updateAddSpotLine);
+  bars.forEach((bar) => {
+    if (bar.classList.contains("spot")) bar.onclick = addSpotStep;
+  });
+
+  map.on("click", handleMapClick);
+  map.on("zoom", () =>
+    document.body.classList.toggle("zoomed-out", map.getZoom() < 9)
+  );
+  clearFilters.onclick = () => {
+    clearParams();
+    navigateHome();
+  };
+
+  setupKnobEventListeners();
+  setupFilterEventListeners();
+}
+
+// Handle map click events
+function handleMapClick(e) {
+  var added = false;
+  if (window.innerWidth < 780) {
+    var layerPoint = map.latLngToLayerPoint(e.latlng);
+    let markers = document.body.classList.contains("filtering")
+      ? filterMarkerGroup
+      : allMarkers;
+    var circles = markers.sort(
+      (a, b) =>
+        a.getLatLng().distanceTo(e.latlng) - b.getLatLng().distanceTo(e.latlng)
+    );
+    if (
+      circles[0] &&
+      map.latLngToLayerPoint(circles[0].getLatLng()).distanceTo(layerPoint) < 20
+    ) {
+      added = true;
+      circles[0].fire("click", e);
+    }
+  }
+
+  if (
+    !added &&
+    !document.body.classList.contains("reporting-duplicate") &&
+    $$(".sidebar.visible") &&
+    !$$(".sidebar.spot-form-container.visible")
+  ) {
+    navigateHome();
+  }
+
+  L.DomEvent.stopPropagation(e);
+}
+
+// Set up event listeners for the knob control
+function setupKnobEventListeners() {
+  knob.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    updateRotation(e);
+    updateDirectionQueryParameter();
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (isDragging) {
+      updateRotation(e);
+      updateDirectionQueryParameter();
+    }
+  });
+
+  window.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
+}
+
+// Set up event listeners for filter controls
+function setupFilterEventListeners() {
+  spreadInput.addEventListener("input", updateConeSpread);
+  knobToggle.addEventListener("input", () =>
+    setQueryParameter("mydirection", knobToggle.checked)
+  );
+  userFilter.addEventListener("input", () =>
+    setQueryParameter("user", userFilter.value)
+  );
+  textFilter.addEventListener("input", () =>
+    setQueryParameter("text", textFilter.value)
+  );
+  distanceFilter.addEventListener("input", () =>
+    setQueryParameter("mindistance", distanceFilter.value)
+  );
+}
+
+// Update the direction query parameter based on knob rotation
+function updateDirectionQueryParameter() {
+  const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
+  const normalizedAngle = (angle + 360) % 360; // Normalize angle
+  setQueryParameter("direction", normalizedAngle);
+}
+
+// Handle changes in the URL hash
+function handleHashChange() {
   if (!window.location.hash.includes(",")) {
     if (!restoreView.apply(map)) {
-      // we'll center on coord
       map.fitBounds([
         [-35, -40],
         [60, 40],
@@ -127,10 +269,7 @@ async function initializeMap() {
 
   if (map.getZoom() > 17 && window.location.hash != "#success-duplicate")
     map.setZoom(17);
-
-  window.onhashchange = navigate;
-  navigate();
-})();
+}
 
 // onReady
 function onReady() {
@@ -975,7 +1114,6 @@ function navigate() {
       lon = +args[1];
     for (let m of allMarkers) {
       if (m._latlng.lat === lat && m._latlng.lng === lon) {
-        console.log(map.getZoom());
         markerClick(m);
         if (map.getZoom() < 3) map.setView(m.getLatLng(), 16);
         return;
