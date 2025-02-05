@@ -1,6 +1,6 @@
 // Register ServiceWorker
 if ("serviceWorker" in navigator) {
-  // navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
+  navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
 }
 
 // Helpers and variables
