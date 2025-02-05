@@ -172,20 +172,13 @@ body.adding-spot .horizontal-button {
       transparent calc(50% + 1px)
     );
 }
-#spot-form > label,
-#spot-form textarea,
-#spot-form input[type="submit"],
-#spot-form input[name="nickname"],
-.sidebar.filters > label,
-.sidebar.filters input[type="text"] {
-  display: block;
-  width: 100%;
+#spot-form > label, #spot-form textarea, #spot-form input[type=submit],
+.sidebar.filters > label, .sidebar.filters input[type=text] {
+    display: block;
+    width: 100%;
 }
-#spot-form > label,
-label[for="nickname"],
-.sidebar.filters label,
-#spot-form input[type="submit"] {
-  margin-top: 18px;
+#spot-form > label, .sidebar.filters label, #spot-form input[type=submit] {
+    margin-top: 18px;
 }
 #spot-form details select,
 #spot-form details input {
