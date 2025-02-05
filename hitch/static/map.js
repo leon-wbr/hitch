@@ -337,10 +337,12 @@ function onReady() {
     navigateHome();
   };
 
-  $$(".report-dup").onclick = (e) =>
+  $$("a.step2-help").onclick = (e) => alert(e.target.title);
+
+  $$(".report-dup").onclick = () =>
     document.body.classList.add("reporting-duplicate");
 
-  $$(".topbar.duplicate button").onclick = (e) =>
+  $$(".topbar.duplicate button").onclick = () =>
     document.body.classList.remove("reporting-duplicate");
 
   map.on("move", updateAddSpotLine);
