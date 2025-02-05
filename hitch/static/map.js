@@ -1,6 +1,6 @@
 // Register ServiceWorker
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
+  navigator.serviceWorker.register("/sw.js").catch((e) => console.error(e));
 }
 
 // Helpers and variables
@@ -105,18 +105,17 @@ async function loadMarkers(map) {
 // Initialize the map and set up event listeners
 (async () => {
   map = await initializeMap();
-  onReady();
+
+  // Set up interactive elements
+  setupGeocoder();
+  addMapControls();
+  setupEventListeners();
+
+  // These functions make the navigation work
   handleHashChange();
   window.onhashchange = navigate;
   navigate();
 })();
-
-// Set up the map after initialization
-function onReady() {
-  setupGeocoder();
-  addMapControls();
-  setupEventListeners();
-}
 
 // Set up the geocoder for location search
 function setupGeocoder() {
@@ -178,6 +177,12 @@ function setupEventListeners() {
 
   setupKnobEventListeners();
   setupFilterEventListeners();
+
+  let filterPane = map.createPane("filtering");
+  filterPane.style.zIndex = 450;
+
+  map.createPane("arrowlines");
+  filterPane.style.zIndex = 1450;
 }
 
 // Handle map click events
@@ -257,7 +262,7 @@ function updateDirectionQueryParameter() {
   setQueryParameter("direction", normalizedAngle);
 }
 
-// Handle changes in the URL hash
+// Handle changes in the URL hash; used for initialization of the map
 function handleHashChange() {
   if (!window.location.hash.includes(",")) {
     if (!restoreView.apply(map)) {
@@ -296,147 +301,6 @@ function handleHashChange() {
 
   if (map.getZoom() > 17 && window.location.hash != "#success-duplicate")
     map.setZoom(17);
-}
-
-// onReady
-function onReady() {
-  // Location search
-  var geocoderOpts = {
-    collapsed: false,
-    defaultMarkGeocode: false,
-    position: "topleft",
-    provider: "photon",
-    placeholder: "Jump to city, search comments",
-    zoom: 11,
-  };
-
-  var customGeocoder = L.Control.Geocoder.photon();
-  geocoderOpts["geocoder"] = customGeocoder;
-
-  let geocoderController = L.Control.geocoder(geocoderOpts).addTo(map);
-
-  let geocoderInput = $$(".leaflet-control-geocoder input");
-  geocoderInput.type = "search";
-
-  geocoderController.on("markgeocode", function (e) {
-    var zoom = geocoderOpts["zoom"] || map.getZoom();
-    map.setView(e.geocode.center, zoom);
-    $$(".leaflet-control-geocoder input").value = "";
-  });
-
-  // Add interaction buttons to the map
-  map.addControl(new MenuButton());
-  map.addControl(new AddSpotButton());
-  map.addControl(new AccountButton());
-  map.addControl(new FilterButton());
-
-  var zoom = $$(".leaflet-control-zoom");
-  zoom.parentNode.appendChild(zoom);
-
-  $$("#sb-close").onclick = function (e) {
-    navigateHome();
-  };
-
-  $$("a.step2-help").onclick = (e) => alert(e.target.title);
-
-  $$(".report-dup").onclick = () =>
-    document.body.classList.add("reporting-duplicate");
-
-  $$(".topbar.duplicate button").onclick = () =>
-    document.body.classList.remove("reporting-duplicate");
-
-  map.on("move", updateAddSpotLine);
-
-  bars.forEach((bar) => {
-    if (bar.classList.contains("spot")) bar.onclick = addSpotStep;
-  });
-
-  map.on("click", (e) => {
-    var added = false;
-
-    if (window.innerWidth < 780) {
-      var layerPoint = map.latLngToLayerPoint(e.latlng);
-      let markers = document.body.classList.contains("filtering")
-        ? filterMarkerGroup
-        : allMarkers;
-      var circles = markers.sort(
-        (a, b) =>
-          a.getLatLng().distanceTo(e.latlng) -
-          b.getLatLng().distanceTo(e.latlng)
-      );
-      if (
-        circles[0] &&
-        map.latLngToLayerPoint(circles[0].getLatLng()).distanceTo(layerPoint) <
-          20
-      ) {
-        added = true;
-        circles[0].fire("click", e);
-      }
-    }
-
-    if (
-      !added &&
-      !document.body.classList.contains("reporting-duplicate") &&
-      $$(".sidebar.visible") &&
-      !$$(".sidebar.spot-form-container.visible")
-    ) {
-      navigateHome();
-    }
-
-    L.DomEvent.stopPropagation(e);
-  });
-
-  map.on("zoom", (e) => {
-    document.body.classList.toggle("zoomed-out", map.getZoom() < 9);
-  });
-
-  clearFilters.onclick = () => {
-    clearParams();
-    navigateHome();
-  };
-
-  knob.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    updateRotation(e);
-    const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
-    const normalizedAngle = (angle + 360) % 360; // Normalize angle
-    setQueryParameter("direction", normalizedAngle);
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (isDragging) {
-      updateRotation(e);
-      const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
-      const normalizedAngle = (angle + 360) % 360; // Normalize angle
-      setQueryParameter("direction", normalizedAngle);
-    }
-  });
-
-  window.addEventListener("mouseup", () => {
-    isDragging = false;
-  });
-
-  spreadInput.addEventListener("input", updateConeSpread);
-  knobToggle.addEventListener("input", () =>
-    setQueryParameter("mydirection", knobToggle.checked)
-  );
-  userFilter.addEventListener("input", () =>
-    setQueryParameter("user", userFilter.value)
-  );
-  textFilter.addEventListener("input", () =>
-    setQueryParameter("text", textFilter.value)
-  );
-  distanceFilter.addEventListener("input", () =>
-    setQueryParameter("mindistance", distanceFilter.value)
-  );
-
-  let filterPane = map.createPane("filtering");
-  filterPane.style.zIndex = 450;
-
-  map.createPane("arrowlines");
-  filterPane.style.zIndex = 1450;
-
-  return map;
 }
 
 // Functions
