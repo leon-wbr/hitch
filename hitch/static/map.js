@@ -15,8 +15,8 @@ var addSpotPoints = [],
   filterMarkerGroup = null,
   spotMarker,
   destMarker,
-  map;
-var bars = document.querySelectorAll(".sidebar, .topbar");
+  map,
+  bars = document.querySelectorAll(".sidebar, .topbar");
 
 // Initialize Map
 async function initializeMap() {
@@ -47,6 +47,11 @@ async function loadMarkers(map) {
   return fetch("/data.json")
     .then((response) => response.json())
     .then((data) => {
+      var markerCluster = L.markerClusterGroup({
+        disableClusteringAtZoom: 7,
+        spiderfyOnMaxZoom: false,
+      });
+
       data.forEach((m) => {
         var color = {
           1: "red",
@@ -85,9 +90,11 @@ async function loadMarkers(map) {
           marker.on("add", (_) => setTimeout((_) => marker.bringToFront(), 0));
         if (m.dest_lats?.length) destinationMarkers.push(marker);
 
-        marker.addTo(map);
+        marker.addTo(markerCluster);
         allMarkers.push(marker);
       });
+
+      markerCluster.addTo(map);
     })
     .catch((error) => {
       console.error("Error loading markers:", error);
