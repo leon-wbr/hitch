@@ -19,4 +19,5 @@ pycountry==24.6.1
 requests-cache==1.2.1
 ruff==0.9.4
 shapely==2.0.7
+simplejson==3.19.3
 xyzservices==2025.1.0
