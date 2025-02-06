@@ -176,7 +176,13 @@ places.reset_index(inplace=True)
 places.sort_values("rating", inplace=True, ascending=False)
 
 
-def generate_json_data(places, filename):
+def write_json_file(places, filename):
+    """Writes a JSON file into the dist folder containing data for the map
+    
+    Args:
+        places: The points to be converted to JSON
+        filename: The filename to be stored into
+    """
     data = places[
         [
             "lat",
@@ -195,13 +201,13 @@ def generate_json_data(places, filename):
 
 
 logger.info("Generating JSON data files")
-generate_json_data(places, os.path.join(dirs["dist"], "data.json"))
+write_json_file(places, os.path.join(dirs["dist"], "data.json"))
 
 places_light = places[(places.text.str.len() > 0) | ~places.distance.isnull()]
-generate_json_data(places_light, os.path.join(dirs["dist"], "data_light.json"))
+write_json_file(places_light, os.path.join(dirs["dist"], "data_light.json"))
 
 places_new = places[~places.distance.isnull()]
-generate_json_data(places_new, os.path.join(dirs["dist"], "data_new.json"))
+write_json_file(places_new, os.path.join(dirs["dist"], "data_new.json"))
 
 recent = points.dropna(subset=["datetime"]).sort_values("datetime", ascending=False).iloc[:1000]
 recent["url"] = "https://hitchmap.com/#" + recent.lat.astype(str) + "," + recent.lon.astype(str)
