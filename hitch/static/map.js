@@ -22,8 +22,6 @@ var allMarkers = [],
 
 // Initialize Map
 async function initializeMap() {
-  if ($$(".folium-map")) return window[$$(".folium-map").id];
-
   return new Promise((resolve, reject) => {
     map = L.map("map", {
       center: [0, 0],
@@ -46,7 +44,13 @@ async function initializeMap() {
 
 // Load markers from JSON data
 async function loadMarkers(map) {
-  return fetch("/points.json")
+  // If the template warrants a variation, load that variation, otherwise all points
+  const url =
+    typeof MAP_VARIATION !== "undefined"
+      ? `/points_${MAP_VARIATION}.json`
+      : `/points.json`;
+
+  return fetch(url)
     .then((response) => response.json())
     .then((data) => {
       var markerCluster = L.markerClusterGroup({
