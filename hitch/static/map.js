@@ -5,7 +5,9 @@ if ("serviceWorker" in navigator) {
 
 // Helpers and variables
 var $$ = (e) => document.querySelector(e);
-var addSpotPoints = [],
+var allMarkers = [],
+  destinationMarkers = [],
+  addSpotPoints = [],
   addSpotLine = null,
   active = [],
   oldActive = [],
