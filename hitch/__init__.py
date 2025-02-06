@@ -97,8 +97,7 @@ def register_commands(app):
 
 
 def register_routes(app):
-    # Serve dist and index.html (when no path is provided)
-    @app.route("/", defaults={"path": "index.html"})
+    # Serve dist
     @app.route("/<path:path>")
     def catch_all(path):
         return send_from_directory(os.path.join(baseDir, "dist"), path)

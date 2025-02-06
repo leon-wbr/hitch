@@ -18,8 +18,8 @@ from hitch.helpers import get_db
 main_bp = Blueprint("main", __name__)
 
 
-# Example of map with JSON data
-@main_bp.route("/map")
+# Index Route is the map
+@main_bp.route("/")
 def map():
     return render_template("map.jinja2")
 
