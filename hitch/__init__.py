@@ -91,14 +91,13 @@ def register_commands(app):
         """
         Executes all scripts defined in array with given args
         """
-        scripts = [("show", ""), ("show", "light"), ("show", "new"), ("dump", ""), ("dashboard", ""), ("heatchmap", "")]
+        scripts = [("show", ""), ("dump", ""), ("dashboard", ""), ("hitchhiking", "")]
         for script, args in scripts:
             ctx.invoke(generate, script=script, args=args)
 
 
 def register_routes(app):
-    # Serve dist and index.html (when no path is provided)
-    @app.route("/", defaults={"path": "index.html"})
+    # Serve dist
     @app.route("/<path:path>")
     def catch_all(path):
         return send_from_directory(os.path.join(baseDir, "dist"), path)
@@ -107,6 +106,7 @@ def register_routes(app):
     def copyright():
         return render_template("copyright.jinja2")
 
+    # These files are manually served in such a way to conform to web standards of them being in the root
     @app.route("/favicon.ico")
     def favicon():
         return send_from_directory(
@@ -120,4 +120,11 @@ def register_routes(app):
         return send_from_directory(
             os.path.join(app.root_path, "static"),
             "manifest.json",
+        )
+
+    @app.route("/sw.js")
+    def sw():
+        return send_from_directory(
+            os.path.join(app.root_path, "static"),
+            "sw.js",
         )
