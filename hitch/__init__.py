@@ -106,6 +106,7 @@ def register_routes(app):
     def copyright():
         return render_template("copyright.jinja2")
 
+    # These files are manually served in such a way to conform to web standards of them being in the root
     @app.route("/favicon.ico")
     def favicon():
         return send_from_directory(
@@ -119,4 +120,11 @@ def register_routes(app):
         return send_from_directory(
             os.path.join(app.root_path, "static"),
             "manifest.json",
+        )
+
+    @app.route("/sw.js")
+    def sw():
+        return send_from_directory(
+            os.path.join(app.root_path, "static"),
+            "sw.js",
         )
