@@ -170,57 +170,52 @@ places.reset_index(inplace=True)
 places.sort_values("rating", inplace=True, ascending=False)
 
 
-def write_json_file(places, filename):
+def write_json_file(data, filename):
     """Writes a JSON file into the dist folder containing data for the map
-    
+
     Args:
-        places: The points to be converted to JSON
+        data: The data to be converted to JSON
         filename: The filename to be stored into
     """
-    data = places[
-        [
-            "lat",
-            "lon",
-            "rating",
-            "text",
-            "wait",
-            "distance",
-            "review_users",
-            "dest_lats",
-            "dest_lons",
-        ]
-    ].to_dict(orient="records")
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(simplejson.dumps(data, ignore_nan=True))
+    filepath = os.path.join(dirs["dist"], filename)
+    logger.info(f"Writing: {filepath}")
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(simplejson.dumps(data.to_dict(orient="records"), ignore_nan=True))
 
+
+point_columns = [
+    "lat",
+    "lon",
+    "rating",
+    "text",
+    "wait",
+    "distance",
+    "review_users",
+    "dest_lats",
+    "dest_lons",
+]
 
 logger.info("Generating JSON data files")
-write_json_file(places, os.path.join(dirs["dist"], "data.json"))
+write_json_file(places[point_columns], "points.json")
 
 places_light = places[(places.text.str.len() > 0) | ~places.distance.isnull()]
-write_json_file(places_light, os.path.join(dirs["dist"], "data_light.json"))
+write_json_file(places_light[point_columns], "points_light.json")
 
-places_new = places[~places.distance.isnull()]
-write_json_file(places_new, os.path.join(dirs["dist"], "data_new.json"))
+places_with_destination = places[~places.distance.isnull()]
+write_json_file(places_with_destination[point_columns], "points_with_destination.json")
 
 recent = points.dropna(subset=["datetime"]).sort_values("datetime", ascending=False).iloc[:1000]
-recent["url"] = "https://hitchmap.com/#" + recent.lat.astype(str) + "," + recent.lon.astype(str)
+recent["url"] = "#" + recent.lat.astype(str) + "," + recent.lon.astype(str)
 recent["text"] = points.comment.fillna("") + " " + points.extra_text.fillna("")
 recent["hitchhiker"] = recent.hitchhiker.str.replace("://", "", regex=False)
 recent["distance"] = recent["distance"].round(1)
 recent["datetime"] = recent["datetime"].astype(str)
 recent["datetime"] += np.where(~recent.ride_datetime.isnull(), " 🕒", "")
+write_json_file(recent[["url", "country", "datetime", "hitchhiker", "rating", "distance", "text"]], "points_recent.json")
 
-recent_data = recent[["url", "country", "datetime", "hitchhiker", "rating", "distance", "text"]].to_dict(orient="records")
-with open(os.path.join(dirs["dist"], "data_recent.json"), "w", encoding="utf-8") as f:
-        f.write(simplejson.dumps(recent_data, ignore_nan=True))
-
-duplicates["from_url"] = "https://hitchmap.com/#" + duplicates.from_lat.astype(str) + "," + duplicates.from_lon.astype(str)
-duplicates["to_url"] = "https://hitchmap.com/#" + duplicates.to_lat.astype(str) + "," + duplicates.to_lon.astype(str)
+duplicates["from_url"] = "#" + duplicates.from_lat.astype(str) + "," + duplicates.from_lon.astype(str)
+duplicates["to_url"] = "#" + duplicates.to_lat.astype(str) + "," + duplicates.to_lon.astype(str)
 duplicates_data = duplicates[["id", "from_url", "to_url", "distance", "reviewed", "accepted"]].to_dict(orient="records")
-with open(os.path.join(dirs["dist"], "data_duplicates.json"), "w", encoding="utf-8") as f:
-        f.write(simplejson.dumps(duplicates_data, ignore_nan=True))
-
-
+write_json_file(duplicates[["id", "from_url", "to_url", "distance", "reviewed", "accepted"]], "points_duplicates.json")
 
 logger.info("Script execution completed")
