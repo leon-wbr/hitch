@@ -44,7 +44,7 @@ async function initializeMap() {
 
 // Load markers from JSON data
 async function loadMarkers(map) {
-  return fetch("/data.json")
+  return fetch("/points.json")
     .then((response) => response.json())
     .then((data) => {
       var markerCluster = L.markerClusterGroup({
