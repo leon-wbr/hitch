@@ -303,8 +303,8 @@ function handleHashChange() {
     map.setZoom(17);
 }
 
-// Functions
-function maybeReportDuplicate(marker) {
+// View functions
+function reportDuplicate(marker) {
   if (document.body.classList.contains("reporting-duplicate")) {
     var row = marker.options._row,
       point = marker.getLatLng();
@@ -342,7 +342,7 @@ function handleMarkerClick(marker, point, e) {
   if ($$(".topbar.visible") || $$(".sidebar.spot-form-container.visible"))
     return;
 
-  maybeReportDuplicate(marker);
+  reportDuplicate(marker);
   window.location.hash = `${point.lat},${point.lng}`;
 
   L.DomEvent.stopPropagation(e);
@@ -380,133 +380,6 @@ function bar(selector) {
   });
   if (selector) $$(selector).classList.add("visible");
 }
-
-var AddSpotButton = L.Control.extend({
-  options: {
-    position: "topleft",
-  },
-  onAdd: function (map) {
-    var controlDiv = L.DomUtil.create(
-      "div",
-      "leaflet-bar horizontal-button add-spot"
-    );
-    var container = L.DomUtil.create("a", "", controlDiv);
-    container.href = "javascript:void(0);";
-    container.innerText = "📍 Add spot";
-
-    container.onclick = function (e) {
-      if (window.location.href.includes("light")) {
-        if (
-          confirm(
-            "Do you want to be redirected to the full version where you can add spots?"
-          )
-        )
-          window.location = "/";
-        return;
-      }
-      clearParams();
-      navigateHome();
-      document.body.classList.add("adding-spot");
-      bar(".topbar.spot.step1");
-
-      L.DomEvent.stopPropagation(e);
-    };
-
-    return controlDiv;
-  },
-});
-
-var MenuButton = L.Control.extend({
-  options: {
-    position: "topleft",
-  },
-  onAdd: function (map) {
-    var controlDiv = L.DomUtil.create(
-      "div",
-      "leaflet-bar horizontal-button menu"
-    );
-    var container = L.DomUtil.create("a", "", controlDiv);
-    container.href = "javascript:void(0);";
-    container.innerHTML = "☰";
-
-    container.onclick = function (e) {
-      navigateHome();
-
-      if (document.body.classList.contains("menu")) {
-        bar();
-      } else {
-        bar(".sidebar.menu");
-      }
-
-      document.body.classList.toggle("menu");
-      L.DomEvent.stopPropagation(e);
-    };
-
-    return controlDiv;
-  },
-});
-
-var AccountButton = L.Control.extend({
-  options: {
-    position: "topleft",
-  },
-  onAdd: function (map) {
-    var controlDiv = L.DomUtil.create(
-      "div",
-      "leaflet-bar horizontal-button your-account"
-    );
-    var container = L.DomUtil.create("a", "", controlDiv);
-    container.href = "/me";
-    container.innerHTML = "👤 Your account";
-
-    return controlDiv;
-  },
-});
-
-var FilterButton = L.Control.extend({
-  options: {
-    position: "topleft",
-  },
-  onAdd: function (map) {
-    var controlDiv = L.DomUtil.create(
-      "div",
-      "leaflet-bar horizontal-button filter-button"
-    );
-    var container = L.DomUtil.create("a", "", controlDiv);
-    container.href = "#filters";
-    container.innerHTML = "🧮 Filters";
-
-    return controlDiv;
-  },
-});
-
-var HeatmapInfoButton = L.Control.extend({
-  options: {
-    position: "topleft",
-  },
-  onAdd: function (map) {
-    var controlDiv = L.DomUtil.create(
-      "div",
-      "leaflet-bar horizontal-button heatmap-info"
-    );
-    var container = L.DomUtil.create("a", "", controlDiv);
-    container.href = "javascript:void(0);";
-    container.innerHTML = "\u2139 What can I see here?";
-
-    container.onclick = function (e) {
-      navigateHome();
-      if (document.body.classList.contains("heatmap-info")) {
-        bar();
-      } else {
-        bar(".sidebar.heatmap-info");
-      }
-      document.body.classList.toggle("heatmap-info");
-      L.DomEvent.stopPropagation(e);
-    };
-
-    return controlDiv;
-  },
-});
 
 function updateAddSpotLine() {
   if (addSpotLine) {
@@ -985,3 +858,131 @@ function navigate() {
     clear();
   }
 }
+
+// Map Controls
+var AddSpotButton = L.Control.extend({
+  options: {
+    position: "topleft",
+  },
+  onAdd: function (map) {
+    var controlDiv = L.DomUtil.create(
+      "div",
+      "leaflet-bar horizontal-button add-spot"
+    );
+    var container = L.DomUtil.create("a", "", controlDiv);
+    container.href = "javascript:void(0);";
+    container.innerText = "📍 Add spot";
+
+    container.onclick = function (e) {
+      if (window.location.href.includes("light")) {
+        if (
+          confirm(
+            "Do you want to be redirected to the full version where you can add spots?"
+          )
+        )
+          window.location = "/";
+        return;
+      }
+      clearParams();
+      navigateHome();
+      document.body.classList.add("adding-spot");
+      bar(".topbar.spot.step1");
+
+      L.DomEvent.stopPropagation(e);
+    };
+
+    return controlDiv;
+  },
+});
+
+var MenuButton = L.Control.extend({
+  options: {
+    position: "topleft",
+  },
+  onAdd: function (map) {
+    var controlDiv = L.DomUtil.create(
+      "div",
+      "leaflet-bar horizontal-button menu"
+    );
+    var container = L.DomUtil.create("a", "", controlDiv);
+    container.href = "javascript:void(0);";
+    container.innerHTML = "☰";
+
+    container.onclick = function (e) {
+      navigateHome();
+
+      if (document.body.classList.contains("menu")) {
+        bar();
+      } else {
+        bar(".sidebar.menu");
+      }
+
+      document.body.classList.toggle("menu");
+      L.DomEvent.stopPropagation(e);
+    };
+
+    return controlDiv;
+  },
+});
+
+var AccountButton = L.Control.extend({
+  options: {
+    position: "topleft",
+  },
+  onAdd: function (map) {
+    var controlDiv = L.DomUtil.create(
+      "div",
+      "leaflet-bar horizontal-button your-account"
+    );
+    var container = L.DomUtil.create("a", "", controlDiv);
+    container.href = "/me";
+    container.innerHTML = "👤 Your account";
+
+    return controlDiv;
+  },
+});
+
+var FilterButton = L.Control.extend({
+  options: {
+    position: "topleft",
+  },
+  onAdd: function (map) {
+    var controlDiv = L.DomUtil.create(
+      "div",
+      "leaflet-bar horizontal-button filter-button"
+    );
+    var container = L.DomUtil.create("a", "", controlDiv);
+    container.href = "#filters";
+    container.innerHTML = "🧮 Filters";
+
+    return controlDiv;
+  },
+});
+
+var HeatmapInfoButton = L.Control.extend({
+  options: {
+    position: "topleft",
+  },
+  onAdd: function (map) {
+    var controlDiv = L.DomUtil.create(
+      "div",
+      "leaflet-bar horizontal-button heatmap-info"
+    );
+    var container = L.DomUtil.create("a", "", controlDiv);
+    container.href = "javascript:void(0);";
+    container.innerHTML = "\u2139 What can I see here?";
+
+    container.onclick = function (e) {
+      navigateHome();
+      if (document.body.classList.contains("heatmap-info")) {
+        bar();
+      } else {
+        bar(".sidebar.heatmap-info");
+      }
+      document.body.classList.toggle("heatmap-info");
+      L.DomEvent.stopPropagation(e);
+    };
+
+    return controlDiv;
+  },
+});
