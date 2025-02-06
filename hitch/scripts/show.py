@@ -1,10 +1,7 @@
 import html
 import logging
 import os
-from string import Template
 
-import folium
-import folium.plugins
 import networkx
 import numpy as np
 import pandas as pd
@@ -19,9 +16,6 @@ dirs = get_dirs()
 
 logger.info("Creating directories if they don't exist")
 os.makedirs(dirs["dist"], exist_ok=True)
-
-logger.info("Loading template")
-template_path = os.path.join(dirs["templates"], "index_template.html")
 
 logger.info("Fetching points from database")
 points = pd.read_sql(
@@ -228,100 +222,5 @@ with open(os.path.join(dirs["dist"], "data_duplicates.json"), "w", encoding="utf
         f.write(simplejson.dumps(duplicates_data, ignore_nan=True))
 
 
-# Generate HTML files
-def generate_html(outname, places):
-    m = folium.Map(prefer_canvas=True, control_scale=True, world_copy_jump=True, min_zoom=1)
-
-    callback = """\
-    function (row) {
-        var marker;
-        var color = {1: 'red', 2: 'orange', 3: 'yellow', 4: 'lightgreen', 5: 'lightgreen'}[row[2]];
-        var opacity = {1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8}[row[2]];
-        var point = new L.LatLng(row[0], row[1])
-        marker = L.circleMarker(
-            point, 
-            {
-                radius: 5, 
-                weight: 1 + (row[6]?.length > 2), 
-                fillOpacity: opacity, 
-                color: 'black', 
-                fillColor: color, 
-                _row: row
-            }
-        );
-
-        marker.on('click', function(e) {
-           handleMarkerClick(marker, point, e)
-        })
-
-        if (row[6]?.length >= 3) {
-            marker.on('add', _ => setTimeout(_ => marker.bringToFront(), 0))
-        }
-
-        if (row[7]?.length) destinationMarkers.push(marker)
-        allMarkers.push(marker)
-
-        return marker;
-    };
-    """
-
-    folium.plugins.FastMarkerCluster(
-        places[
-            [
-                "lat",
-                "lon",
-                "rating",
-                "text",
-                "wait",
-                "distance",
-                "review_users",
-                "dest_lats",
-                "dest_lons",
-            ]
-        ].values,
-        disableClusteringAtZoom=7,
-        spiderfyOnMaxZoom=False,
-        bubblingMouseEvents=False,
-        callback=callback,
-        animate=False,
-    ).add_to(m)
-
-    m.get_root().render()
-
-    header = m.get_root().header.render()
-    header = header.replace(
-        '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>',
-        '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">',
-    )
-    header = header.replace(
-        '<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css"/>',
-        '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">',
-    )
-    body = m.get_root().html.render()
-    script = m.get_root().script.render()
-
-    with (
-        open(template_path, encoding="utf-8") as template,
-        open(outname, "w", encoding="utf-8") as out,
-        open(os.path.join(dirs["base"], "static", "map.js")) as js,
-        open(os.path.join(dirs["base"], "static", "style.css")) as css,
-    ):
-        output = Template(template.read()).substitute(
-            {
-                "folium_head": header,
-                "folium_body": body,
-                "folium_script": script,
-                "hitch_script": js.read(),
-                "hitch_style": css.read(),
-            }
-        )
-
-        out.write(output)
-
-
-logger.info("Generating HTML files")
-generate_html(os.path.join(dirs["dist"], "index.html"), places)
-generate_html(os.path.join(dirs["dist"], "light.html"), places_light)
-generate_html(os.path.join(dirs["dist"], "new.html"), places_new)
 
 logger.info("Script execution completed")
