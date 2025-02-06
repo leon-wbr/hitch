@@ -18,10 +18,13 @@ from hitch.helpers import get_db
 main_bp = Blueprint("main", __name__)
 
 
-# Example of map with JSON data
-@main_bp.route("/map")
-def map():
-    return render_template("map.jinja2")
+# Index route for the map, supports optional .html ending
+# Additionally, there can be map variations: light, with_destination
+@main_bp.route("/", defaults={"map_variation": None})
+@main_bp.route("/<any(light, with_destination):map_variation>")
+@main_bp.route("/<any(index, light, with_destination):map_variation>.html")
+def map(map_variation):
+    return render_template("map.jinja2", map_variation=map_variation)
 
 
 # Log experience (reviews)

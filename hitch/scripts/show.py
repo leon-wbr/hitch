@@ -1,10 +1,7 @@
 import html
 import logging
 import os
-from string import Template
 
-import folium
-import folium.plugins
 import networkx
 import numpy as np
 import pandas as pd
@@ -19,9 +16,6 @@ dirs = get_dirs()
 
 logger.info("Creating directories if they don't exist")
 os.makedirs(dirs["dist"], exist_ok=True)
-
-logger.info("Loading template")
-template_path = os.path.join(dirs["templates"], "index_template.html")
 
 logger.info("Fetching points from database")
 points = pd.read_sql(
@@ -176,146 +170,52 @@ places.reset_index(inplace=True)
 places.sort_values("rating", inplace=True, ascending=False)
 
 
-def generate_json_data(places, filename):
-    data = places[
-        [
-            "lat",
-            "lon",
-            "rating",
-            "text",
-            "wait",
-            "distance",
-            "review_users",
-            "dest_lats",
-            "dest_lons",
-        ]
-    ].to_dict(orient="records")
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(simplejson.dumps(data, ignore_nan=True))
+def write_json_file(data, filename):
+    """Writes a JSON file into the dist folder containing data for the map
 
+    Args:
+        data: The data to be converted to JSON
+        filename: The filename to be stored into
+    """
+    filepath = os.path.join(dirs["dist"], filename)
+    logger.info(f"Writing: {filepath}")
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(simplejson.dumps(data.to_dict(orient="records"), ignore_nan=True))
+
+
+point_columns = [
+    "lat",
+    "lon",
+    "rating",
+    "text",
+    "wait",
+    "distance",
+    "review_users",
+    "dest_lats",
+    "dest_lons",
+]
 
 logger.info("Generating JSON data files")
-generate_json_data(places, os.path.join(dirs["dist"], "data.json"))
+write_json_file(places[point_columns], "points.json")
 
 places_light = places[(places.text.str.len() > 0) | ~places.distance.isnull()]
-generate_json_data(places_light, os.path.join(dirs["dist"], "data_light.json"))
+write_json_file(places_light[point_columns], "points_light.json")
 
-places_new = places[~places.distance.isnull()]
-generate_json_data(places_new, os.path.join(dirs["dist"], "data_new.json"))
+places_with_destination = places[~places.distance.isnull()]
+write_json_file(places_with_destination[point_columns], "points_with_destination.json")
 
 recent = points.dropna(subset=["datetime"]).sort_values("datetime", ascending=False).iloc[:1000]
-recent["url"] = "https://hitchmap.com/#" + recent.lat.astype(str) + "," + recent.lon.astype(str)
+recent["url"] = "#" + recent.lat.astype(str) + "," + recent.lon.astype(str)
 recent["text"] = points.comment.fillna("") + " " + points.extra_text.fillna("")
 recent["hitchhiker"] = recent.hitchhiker.str.replace("://", "", regex=False)
 recent["distance"] = recent["distance"].round(1)
 recent["datetime"] = recent["datetime"].astype(str)
 recent["datetime"] += np.where(~recent.ride_datetime.isnull(), " 🕒", "")
+write_json_file(recent[["url", "country", "datetime", "hitchhiker", "rating", "distance", "text"]], "points_recent.json")
 
-recent_data = recent[["url", "country", "datetime", "hitchhiker", "rating", "distance", "text"]].to_dict(orient="records")
-with open(os.path.join(dirs["dist"], "data_recent.json"), "w", encoding="utf-8") as f:
-        f.write(simplejson.dumps(recent_data, ignore_nan=True))
-
-duplicates["from_url"] = "https://hitchmap.com/#" + duplicates.from_lat.astype(str) + "," + duplicates.from_lon.astype(str)
-duplicates["to_url"] = "https://hitchmap.com/#" + duplicates.to_lat.astype(str) + "," + duplicates.to_lon.astype(str)
+duplicates["from_url"] = "#" + duplicates.from_lat.astype(str) + "," + duplicates.from_lon.astype(str)
+duplicates["to_url"] = "#" + duplicates.to_lat.astype(str) + "," + duplicates.to_lon.astype(str)
 duplicates_data = duplicates[["id", "from_url", "to_url", "distance", "reviewed", "accepted"]].to_dict(orient="records")
-with open(os.path.join(dirs["dist"], "data_duplicates.json"), "w", encoding="utf-8") as f:
-        f.write(simplejson.dumps(duplicates_data, ignore_nan=True))
-
-
-# Generate HTML files
-def generate_html(outname, places):
-    m = folium.Map(prefer_canvas=True, control_scale=True, world_copy_jump=True, min_zoom=1)
-
-    callback = """\
-    function (row) {
-        var marker;
-        var color = {1: 'red', 2: 'orange', 3: 'yellow', 4: 'lightgreen', 5: 'lightgreen'}[row[2]];
-        var opacity = {1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8}[row[2]];
-        var point = new L.LatLng(row[0], row[1])
-        marker = L.circleMarker(
-            point, 
-            {
-                radius: 5, 
-                weight: 1 + (row[6]?.length > 2), 
-                fillOpacity: opacity, 
-                color: 'black', 
-                fillColor: color, 
-                _row: row
-            }
-        );
-
-        marker.on('click', function(e) {
-           handleMarkerClick(marker, point, e)
-        })
-
-        if (row[6]?.length >= 3) {
-            marker.on('add', _ => setTimeout(_ => marker.bringToFront(), 0))
-        }
-
-        if (row[7]?.length) destinationMarkers.push(marker)
-        allMarkers.push(marker)
-
-        return marker;
-    };
-    """
-
-    folium.plugins.FastMarkerCluster(
-        places[
-            [
-                "lat",
-                "lon",
-                "rating",
-                "text",
-                "wait",
-                "distance",
-                "review_users",
-                "dest_lats",
-                "dest_lons",
-            ]
-        ].values,
-        disableClusteringAtZoom=7,
-        spiderfyOnMaxZoom=False,
-        bubblingMouseEvents=False,
-        callback=callback,
-        animate=False,
-    ).add_to(m)
-
-    m.get_root().render()
-
-    header = m.get_root().header.render()
-    header = header.replace(
-        '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>',
-        '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">',
-    )
-    header = header.replace(
-        '<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css"/>',
-        '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">',
-    )
-    body = m.get_root().html.render()
-    script = m.get_root().script.render()
-
-    with (
-        open(template_path, encoding="utf-8") as template,
-        open(outname, "w", encoding="utf-8") as out,
-        open(os.path.join(dirs["base"], "static", "map.js")) as js,
-        open(os.path.join(dirs["base"], "static", "style.css")) as css,
-    ):
-        output = Template(template.read()).substitute(
-            {
-                "folium_head": header,
-                "folium_body": body,
-                "folium_script": script,
-                "hitch_script": js.read(),
-                "hitch_style": css.read(),
-            }
-        )
-
-        out.write(output)
-
-
-logger.info("Generating HTML files")
-generate_html(os.path.join(dirs["dist"], "index.html"), places)
-generate_html(os.path.join(dirs["dist"], "light.html"), places_light)
-generate_html(os.path.join(dirs["dist"], "new.html"), places_new)
+write_json_file(duplicates[["id", "from_url", "to_url", "distance", "reviewed", "accepted"]], "points_duplicates.json")
 
 logger.info("Script execution completed")

@@ -45,7 +45,8 @@ def register_blueprints(app):
 
 def register_commands(app):
     @app.cli.command()
-    def init():
+    @click.pass_context
+    def init(ctx):
         """Initialize the database."""
         # create necessary sql tables
         security.datastore.db.create_all()
@@ -59,6 +60,8 @@ def register_commands(app):
         security.datastore.find_or_create_role(name="user", permissions={"user-read", "user-write"})
         security.datastore.find_or_create_role(name="reader", permissions={"user-read"})
         security.datastore.db.session.commit()
+
+        ctx.invoke(generate_all)
 
     @app.cli.command()
     @click.argument("script", default="show")
@@ -97,8 +100,7 @@ def register_commands(app):
 
 
 def register_routes(app):
-    # Serve dist and index.html (when no path is provided)
-    @app.route("/", defaults={"path": "index.html"})
+    # Serve dist
     @app.route("/<path:path>")
     def catch_all(path):
         return send_from_directory(os.path.join(baseDir, "dist"), path)
@@ -107,6 +109,7 @@ def register_routes(app):
     def copyright():
         return render_template("copyright.jinja2")
 
+    # These files are manually served in such a way to conform to web standards of them being in the root
     @app.route("/favicon.ico")
     def favicon():
         return send_from_directory(
@@ -120,4 +123,11 @@ def register_routes(app):
         return send_from_directory(
             os.path.join(app.root_path, "static"),
             "manifest.json",
+        )
+
+    @app.route("/sw.js")
+    def sw():
+        return send_from_directory(
+            os.path.join(app.root_path, "static"),
+            "sw.js",
         )

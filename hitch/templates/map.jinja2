@@ -18,17 +18,16 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.min.js"
     crossorigin=""></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"
-    crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.min.js"
     crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.js" crossorigin=""></script>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    var allMarkers = [], destinationMarkers = []
-</script>
+{% if map_variation %}
+<script>var MAP_VARIATION = "{{ map_variation }}";</script>
+{% endif %}
 <script src="/static/map.js"></script>
 <script async defer src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
 {% endblock %}
