@@ -105,9 +105,10 @@ def register_routes(app):
     def catch_all(path):
         return send_from_directory(os.path.join(baseDir, "dist"), path)
 
+    @app.route("/copyright")
     @app.route("/copyright.html")
     def copyright():
-        return render_template("copyright.jinja2")
+        return render_template("copyright.html")
 
     # These files are manually served in such a way to conform to web standards of them being in the root
     @app.route("/favicon.ico")
