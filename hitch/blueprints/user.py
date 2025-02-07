@@ -81,7 +81,7 @@ def show_account(username, is_me=False):
     if is_me and current_user.is_anonymous:
         return redirect("/login")
 
-    user = current_user if is_me is True else security.datastore.find_user(username=username)
+    user = current_user if is_me else security.datastore.find_user(username=username)
 
     current_app.logger.info(
         f"Received request to show user account for {current_user.username}"
