@@ -71,7 +71,7 @@ def is_username_used(username):
 
 @user_bp.route("/me", methods=["GET"], defaults={"username": None, "is_me": True})
 @user_bp.route("/account/<username>", methods=["GET"])
-def show_account(username, is_me=False):
+def show_account(username, is_me: bool = False):
     """Returns either the current account or the requested user
 
     Args:
