@@ -3,6 +3,11 @@ from flask_security import current_user
 
 from hitch.extensions import security
 from hitch.forms import UserEditForm
+from hitch.helpers import get_db
+
+import random
+
+import pandas as pd
 
 user_bp = Blueprint("user", __name__)
 
@@ -124,3 +129,46 @@ def show_account(username):
     else:
         # TODO
         return "User not found."
+
+
+@user_bp.route("/create-new-trip", methods=["GET", "POST"])
+def create_new_trip():
+    """Endpoint to create a new trip."""
+    if current_user.is_anonymous:
+        return jsonify({"error": "You need to be logged in to create a trip."})
+
+    df = pd.DataFrame(
+        [
+            {
+                "user_id": current_user.id,
+            }
+        ],
+        index=[random.randint(0, 2**63)],
+    )
+
+    df.to_sql("user_trips", get_db(), index_label="trip_id", if_exists="append")
+    return redirect("/trips")
+
+@user_bp.route("/trips", methods=["GET", "POST"])
+def trips():
+    """Shows a list of the rewievs of the user."""
+    if current_user.is_anonymous:
+        return redirect("/login")
+    
+    current_user_reviews = pd.read_sql(f"select * from points where user_id = {current_user.id}", get_db())
+    current_user_trips = pd.read_sql(f"select * from user_trips where user_id = {current_user.id}", get_db())
+
+    link = "<a href='/create-new-trip'>Create a new trip</a>"
+    res = link + "\n"
+
+    for _, trip in current_user_trips.iterrows():
+        res += f"Trip id: {trip.trip_id}\n"
+
+
+    return res + current_user_reviews.to_string()
+
+
+@user_bp.route("/edit-trips", methods=["GET", "POST"])
+def edit_trips():
+    # form
+    pass
