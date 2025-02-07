@@ -460,6 +460,7 @@ function addSpotStep(e) {
       const details = $$("#extended_info");
       const signal = $$("#signal");
       const datetime_ride = $$("#datetime_ride");
+      const datetime_destination = $$("#datetime_destination");
       let hasBeenOpen = details.open;
 
       details.addEventListener("toggle", function () {
@@ -467,7 +468,7 @@ function addSpotStep(e) {
       });
 
       form.addEventListener("submit", (event) => {
-        const hasHiddenFields = signal.value != "null" || datetime_ride.value;
+        const hasHiddenFields = signal.value != "null" || datetime_ride.value || datetime_destination.value;
         if (hasHiddenFields && !hasBeenOpen) {
           $$("#details-seen").classList.remove("make-invisible");
           hasBeenOpen = details.open = true;
