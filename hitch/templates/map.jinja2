@@ -90,7 +90,7 @@
             <label for="datetime_destination">When did you arrive at your destination?</label>
             <input id="datetime_destination" type="datetime-local" name="datetime_destination">
             <!-- maximum date is today -->
-            must be after start time
+            TODO: must be after start time
             <script>
                 document.getElementById("datetime_destination").max = (new Date().toISOString().slice(0, 11)) + "23:59";
             </script>
