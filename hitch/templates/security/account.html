@@ -3,6 +3,8 @@
 {% set escaped_hitchwiki_username = user.hitchwiki_username | escape %}
 {% set escaped_trustroots_username = user.trustroots_username | escape %}
 
+{% set title = user.username %}
+
 {% block content %}
 <h1>User</h1>
 

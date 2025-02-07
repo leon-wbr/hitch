@@ -1,5 +1,7 @@
 {% extends "security/base.html" %}
 
+{% set title = "Edit Account" %}
+
 {% block content %}
 <h1>Edit your personal data </h1>
 <form method="POST" action="{{ url_for('user.form') }}">
