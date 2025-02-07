@@ -105,6 +105,7 @@ def register_routes(app):
     def catch_all(path):
         return send_from_directory(os.path.join(baseDir, "dist"), path)
 
+    @app.route("/copyright")
     @app.route("/copyright.html")
     def copyright():
         return render_template("copyright.html")
