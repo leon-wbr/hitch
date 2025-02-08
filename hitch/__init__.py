@@ -14,19 +14,20 @@ from hitch.settings import config
 
 baseDir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
-
 def create_app(config_name=None):
     if config_name is None:
         config_name = os.getenv("FLASK_CONFIG", "development")
 
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+    app.logger.info("Executing 'hitch/__init__.py': (To create an 'app' and start the server)")
 
     register_extensions(app)
     register_blueprints(app)
     register_commands(app)
     register_routes(app)
 
+    app.logger.info("Executed 'hitch/__init__.py': (Successfully)")
     return app
 
 
@@ -107,11 +108,13 @@ def register_routes(app):
 
     @app.route("/copyright.html")
     def copyright():
+        app.logger.info(f"Executing 'hitch/__init__.py': (Received request to navigate towards the copyrights section)")
         return render_template("copyright.jinja2")
 
     # These files are manually served in such a way to conform to web standards of them being in the root
     @app.route("/favicon.ico")
     def favicon():
+        app.logger.info(f"Executing 'hitch/__init__.py': (Received request to navigate towards the web page icon)")
         return send_from_directory(
             os.path.join(app.root_path, "static"),
             "favicon.ico",
@@ -120,6 +123,7 @@ def register_routes(app):
 
     @app.route("/manifest.json")
     def manifest():
+        app.logger.info(f"Executing 'hitch/__init__.py': (Received request to see the metadata of the webpages)")
         return send_from_directory(
             os.path.join(app.root_path, "static"),
             "manifest.json",
@@ -127,6 +131,7 @@ def register_routes(app):
 
     @app.route("/sw.js")
     def sw():
+        app.logger.info(f"Executing 'hitch/__init__.py': (Received request to see 'sw.js' file that manages background tasks)")
         return send_from_directory(
             os.path.join(app.root_path, "static"),
             "sw.js",

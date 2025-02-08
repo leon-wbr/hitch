@@ -9,7 +9,9 @@ user_bp = Blueprint("user", __name__)
 
 @user_bp.route("/edit-user", methods=["GET", "POST"])
 def form():
+    current_app.logger.info(f"Executing '{__name__.replace('.','/')}.py': (Received request to navigate towards the edit-user section)")
     if current_user.is_anonymous:
+        current_app.logger.info(f"Executing '{__name__.replace('.', '/')}.py': (Received request to navigate towards the login section as user is 'anonymous')")
         return redirect("/login")
 
     form = UserEditForm()
@@ -40,8 +42,8 @@ def form():
 
 @user_bp.route("/user", methods=["GET"])
 def get_user():
-    """Endpoint to get the currently logged in user."""
-    current_app.logger.info("Received request to get user.")
+    """Endpoint to get the currently logged-in user."""
+    current_app.logger.info(f"Executing '{__name__.replace('.','/')}.py': (Received request to get user)")
 
     # Check if the user is logged in
     if not current_user.is_anonymous:
@@ -53,6 +55,7 @@ def get_user():
 # TODO: properly delete the user after their confirmation
 @user_bp.route("/delete-user", methods=["GET"])
 def delete_user():
+    current_app.logger.info(f"Executing '{__name__.replace('.','/')}.py': (Received request to delete the user)")
     return f"To delete your account please send an email to {current_app.config['EMAIL']} with the subject 'Delete my account'."
 
 
@@ -67,7 +70,9 @@ def get_origin_string(user):
 
 @user_bp.route("/me", methods=["GET"])
 def show_current_user():
+    current_app.logger.info(f"Executing '{__name__.replace('.', '/')}.py': (Received request to navigate towards the current user section)")
     if current_user.is_anonymous:
+        current_app.logger.info(f"Executing '{__name__.replace('.', '/')}.py': (Received request to navigate towards the login section as user is 'anonymous')")
         return redirect("/login")
 
     user = current_user
@@ -92,7 +97,7 @@ def show_current_user():
 @user_bp.route("/is_username_used/<username>", methods=["GET"])
 def is_username_used(username):
     """Endpoint to check if a username is already used."""
-    current_app.logger.info(f"Received request to check if username {username} is used.")
+    current_app.logger.info(f"Executing '{__name__.replace('.', '/')}.py': (Received request to check if username {username} is used)")
 
     user = security.datastore.find_user(username=username)
 
@@ -104,7 +109,7 @@ def is_username_used(username):
 
 @user_bp.route("/account/<username>", methods=["GET"])
 def show_account(username):
-    current_app.logger.info(f"Received request to show user {username}.")
+    current_app.logger.info(f"Executing '{__name__.replace('.', '/')}.py': (Received request to show user {username})")
 
     user = security.datastore.find_user(username=username)
     if user:
