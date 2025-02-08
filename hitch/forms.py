@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pycountry
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, SelectField, StringField, SubmitField
+from wtforms import FieldList, IntegerField, SelectField, StringField, SubmitField
 from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
 
@@ -38,4 +38,10 @@ class UserEditForm(FlaskForm):
     origin_city = StringField("Which city are you from?", validators=[Optional()])
     hitchwiki_username = StringField("Hitchwiki Username", validators=[Optional()], default=None)
     trustroots_username = StringField("Trustroots Username", validators=[Optional()], default=None)
+    submit = SubmitField("Submit")
+
+
+class ReviewForm(FlaskForm):
+    ride_id = IntegerField("Ride ID", validators=[Optional()])
+    trip_id = IntegerField("Trip ID", validators=[Optional()])
     submit = SubmitField("Submit")

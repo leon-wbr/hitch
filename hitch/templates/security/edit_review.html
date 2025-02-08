@@ -1,0 +1,14 @@
+{% extends "security/base.html" %}
+
+{% set title = "Edit Trips" %}
+
+{% block content %}
+<h1>Edit your trips </h1>
+<form method="POST" action="{{ url_for('user.edit_review') }}">
+    {{ form.csrf_token }}
+    <p>{{ form.ride_id.label }} {{ form.ride_id() }}</p>
+    <p>{{ form.trip_id.label }} {{ form.trip_id() }}</p>
+    <br>
+    {{ form.submit }}
+</form>
+{% endblock %}

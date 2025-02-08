@@ -1,13 +1,12 @@
+import random
+
+import pandas as pd
 from flask import Blueprint, current_app, jsonify, redirect, render_template
 from flask_security import current_user
 
 from hitch.extensions import security
-from hitch.forms import UserEditForm
+from hitch.forms import ReviewForm, UserEditForm
 from hitch.helpers import get_db
-
-import random
-
-import pandas as pd
 
 user_bp = Blueprint("user", __name__)
 
@@ -129,16 +128,40 @@ def trips():
     current_user_trips = pd.read_sql(f"select * from user_trips where user_id = {current_user.id}", get_db())
 
     link = "<a href='/create-new-trip'>Create a new trip</a>"
-    res = link + "\n"
+    link2 = "<a href='/edit-review'>Edit a review</a>"
+    res = link + "<br>" + link2 + "<br>"
 
     for _, trip in current_user_trips.iterrows():
-        res += f"Trip id: {trip.trip_id}\n"
+        res += f"Trip id: {trip.trip_id}<br>"
 
 
-    return res + current_user_reviews.to_string()
+    return res + current_user_reviews.to_html()
 
 
-@user_bp.route("/edit-trips", methods=["GET", "POST"])
-def edit_trips():
-    # form
-    pass
+@user_bp.route("/edit-review", methods=["GET", "POST"])
+def edit_review():
+
+    form = ReviewForm()
+
+    if form.validate_on_submit():
+        ride_id = form.ride_id.data
+        trip_id = form.trip_id.data
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute('''CREATE TABLE IF NOT EXISTS trips (
+                    ride_id INTEGER UNIQUE,
+                    trip_id INTEGER)''')
+        
+        # Insert or replace existing entry
+        cursor.execute("INSERT OR REPLACE INTO trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
+
+        conn.commit()
+        conn.close()
+        return redirect("/trips")
+
+    form.ride_id.data = 1
+    form.trip_id.data = 1
+
+    
+    return render_template("security/edit_review.html", form=form)
