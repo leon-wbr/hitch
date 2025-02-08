@@ -1,3 +1,4 @@
+import logging
 import random
 
 import pandas as pd
@@ -7,6 +8,9 @@ from flask_security import current_user
 from hitch.extensions import security
 from hitch.forms import ReviewForm, UserEditForm
 from hitch.helpers import get_db
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 user_bp = Blueprint("user", __name__)
 
@@ -96,8 +100,59 @@ def show_account(username, is_me: bool = False):
     # TODO: Proper 404
     if user is None:
         return "User not found."
-    
+
     return render_template("security/account.html", user=user, is_me=is_me)
+
+
+@user_bp.route("/create-trips", methods=["GET", "POST"])
+def create_trips():
+    if current_user.is_anonymous:
+        return redirect("/login")
+    
+    trips = pd.read_sql("select * from trips", get_db())
+    reviews = pd.read_sql("select * from points where nickname = 'Chris9012'", get_db())
+    reviews["trip_id"] = pd.merge(
+        left=reviews["id"], right=trips, how="left", left_on="id", right_on="ride_id"
+    )["trip_id"].astype(pd.Int64Dtype())
+
+    reviews = reviews[reviews["trip_id"].isnull()]
+    reviews = reviews[reviews["ride_datetime"].notnull()]
+    reviews = reviews.sort_values(by="ride_datetime", ascending=True)
+
+    # heuristic for trip: rides on the same day are part of the same trip
+    reviews["ride_datetime"] = pd.to_datetime(reviews["ride_datetime"])
+    reviews["date"] = reviews['ride_datetime'].dt.date
+    day_groups = reviews.groupby("date")
+    if len(day_groups) > 0:
+        conn = get_db()
+        cursor = conn.cursor()
+        for trip in day_groups:
+            trip_id = random.randint(0, 2**63)
+            logger.info(f"Creating trip {trip_id} for user {current_user.id}")
+            df = pd.DataFrame(
+                [
+                    {
+                        "user_id": current_user.id,
+                    }
+                ],
+                index=[trip_id],
+            )
+
+            df.to_sql("user_trips", get_db(), index_label="trip_id", if_exists="append")
+
+            for _, ride in trip[1].iterrows():
+               
+
+                # Insert or replace existing entry
+                cursor.execute("INSERT OR REPLACE INTO trips (ride_id, trip_id) VALUES (?, ?)", (ride["id"], trip_id))
+
+                conn.commit()
+
+        conn.close()
+
+    return redirect("/trips")
+
+
 
 
 @user_bp.route("/create-new-trip", methods=["GET", "POST"])
@@ -118,29 +173,36 @@ def create_new_trip():
     df.to_sql("user_trips", get_db(), index_label="trip_id", if_exists="append")
     return redirect("/trips")
 
+
 @user_bp.route("/trips", methods=["GET", "POST"])
 def trips():
     """Shows a list of the rewievs of the user."""
     if current_user.is_anonymous:
         return redirect("/login")
     
+    trips = pd.read_sql("select * from trips", get_db())
+
     current_user_reviews = pd.read_sql(f"select * from points where user_id = {current_user.id}", get_db())
+    current_user_reviews["trip_id"] = pd.merge(
+        left=current_user_reviews["id"], right=trips, how="left", left_on="id", right_on="ride_id"
+    )["trip_id"].astype(pd.Int64Dtype())
     current_user_trips = pd.read_sql(f"select * from user_trips where user_id = {current_user.id}", get_db())
 
     link = "<a href='/create-new-trip'>Create a new trip</a>"
+    link1 = "<a href='/create-trips'>Create trips</a>"
     link2 = "<a href='/edit-review'>Edit a review</a>"
-    res = link + "<br>" + link2 + "<br>"
+    res = link + "<br>" + link1 + "<br>" + link2 + "<br>"
 
     for _, trip in current_user_trips.iterrows():
         res += f"Trip id: {trip.trip_id}<br>"
-
+        for _, row in pd.read_sql(f"select * from trips where trip_id = {trip.trip_id}", get_db()).iterrows():
+            res += f"____Ride id: {row.ride_id}<br>"
 
     return res + current_user_reviews.to_html()
 
 
 @user_bp.route("/edit-review", methods=["GET", "POST"])
 def edit_review():
-
     form = ReviewForm()
 
     if form.validate_on_submit():
@@ -148,11 +210,11 @@ def edit_review():
         trip_id = form.trip_id.data
         conn = get_db()
         cursor = conn.cursor()
-        
-        cursor.execute('''CREATE TABLE IF NOT EXISTS trips (
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS trips (
                     ride_id INTEGER UNIQUE,
-                    trip_id INTEGER)''')
-        
+                    trip_id INTEGER)""")
+
         # Insert or replace existing entry
         cursor.execute("INSERT OR REPLACE INTO trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
 
@@ -163,5 +225,4 @@ def edit_review():
     form.ride_id.data = 1
     form.trip_id.data = 1
 
-    
     return render_template("security/edit_review.html", form=form)
