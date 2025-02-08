@@ -35,6 +35,8 @@ except pd.errors.DatabaseError as err:
     logger.error("Failed to fetch users from database")
     raise Exception("Run server.py to create the user table") from err
 
+trips = pd.read_sql("select * from trips", get_db())
+
 logger.info(f"{len(points)} points currently")
 
 # merging and transforming data
@@ -148,6 +150,9 @@ points["text"] = (
     + points.ride_datetime.dt.strftime(", %a %d %b %Y, %H:%M").fillna(review_submit_datetime)
 )
 
+points["trip_id"] = pd.merge(left=points["id"], right=trips, how="left", left_on="id", right_on="ride_id")["trip_id"]
+
+
 oldies = points.datetime.dt.year <= 2021
 points.loc[oldies, "text"] = (
     e(comment_nl[oldies]) + "―" + points.loc[oldies, "user_link"] + points[oldies].datetime.dt.strftime(", %B %Y").fillna("")
@@ -193,6 +198,7 @@ point_columns = [
     "review_users",
     "dest_lats",
     "dest_lons",
+    "trip_id",
 ]
 
 logger.info("Generating JSON data files")
