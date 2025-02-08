@@ -136,7 +136,7 @@ points["username"] = pd.merge(
 points["hitchhiker"] = points["nickname"].fillna(points["username"])
 
 points["user_link"] = ("<a href='/?user=" + e(points["hitchhiker"]) + "#filters'>" + e(points["hitchhiker"]) + "</a>").fillna(
-    "Anonymous"
+    "<a href='/claim-review/" + points["id"].astype(str) + "'><i>Claim this review as yours</i></a>"
 )
 
 points["text"] = (

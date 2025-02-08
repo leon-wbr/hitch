@@ -3,6 +3,7 @@ from flask_security import current_user
 
 from hitch.extensions import security
 from hitch.forms import UserEditForm
+from hitch.helpers import get_db
 
 user_bp = Blueprint("user", __name__)
 
@@ -94,3 +95,39 @@ def show_account(username, is_me: bool = False):
         return "User not found."
 
     return render_template("security/account.html", user=user, is_me=is_me)
+
+
+@user_bp.route("/claim-review/<review_id>", methods=["GET", "POST"])
+def claim_review(review_id: int):
+    """Endpoint to claim a review."""
+    current_app.logger.info(f"Received request to claim review {review_id}.")
+
+    if current_user.is_anonymous:
+        return redirect("/login")
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("create table if not exists claims (id integer primary key, user_id integer, review_id integer, timestamp timestamp default current_timestamp)")
+
+    # Insert or replace existing entry
+    query_result = cursor.execute(f"select user_id from points where id = {review_id}").fetchall()
+    if len(query_result) == 0:
+        reply = render_template("security/failed.html", message="Review not found.")
+    elif len(query_result) > 1:
+        reply = render_template("security/failed.html", message="Multiple reviews found.")
+    elif query_result[0][0] is not None:
+        reply = render_template("security/failed.html", message="Review already claimed.")
+    else:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(f"update points set user_id = {current_user.id} where id = {review_id}")
+        cursor.execute(f"insert or replace into claims (user_id, review_id) values ({current_user.id}, {review_id})")
+        conn.commit()
+        reply = redirect("/")
+
+    conn.close()
+
+    return reply
+    
+
+    
