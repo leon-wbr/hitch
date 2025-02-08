@@ -127,6 +127,9 @@ def create_trips():
         conn = get_db()
         cursor = conn.cursor()
         for trip in day_groups:
+            trip_df = trip[1]
+            if len(trip_df) < 2:
+                continue
             trip_id = random.randint(0, 2**63)
             logger.info(f"Creating trip {trip_id} for user {current_user.id}")
             df = pd.DataFrame(
@@ -140,7 +143,7 @@ def create_trips():
 
             df.to_sql("user_trips", get_db(), index_label="trip_id", if_exists="append")
 
-            for _, ride in trip[1].iterrows():
+            for _, ride in trip_df.iterrows():
                
 
                 # Insert or replace existing entry
@@ -182,7 +185,7 @@ def trips():
     
     trips = pd.read_sql("select * from trips", get_db())
 
-    current_user_reviews = pd.read_sql(f"select * from points where user_id = {current_user.id}", get_db())
+    current_user_reviews = pd.read_sql(f"select * from points where nickname = '{current_user.username}'", get_db())
     current_user_reviews["trip_id"] = pd.merge(
         left=current_user_reviews["id"], right=trips, how="left", left_on="id", right_on="ride_id"
     )["trip_id"].astype(pd.Int64Dtype())
