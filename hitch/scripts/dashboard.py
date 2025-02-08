@@ -1,10 +1,10 @@
 import html
+import logging
 import os
 from string import Template
 
 import pandas as pd
 import plotly.express as px
-import logging
 
 from hitch.helpers import get_db, get_dirs
 
