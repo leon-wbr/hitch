@@ -4,8 +4,12 @@ from string import Template
 
 import pandas as pd
 import plotly.express as px
+import logging
 
 from hitch.helpers import get_db, get_dirs
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 dirs = get_dirs()
 
@@ -121,12 +125,12 @@ def get_num_reviews(username):
 
 user_accounts = ""
 count_inactive_users = 0
-for _i, user in users.iterrows():
+for _, user in users.iterrows():
     if get_num_reviews(user.username) >= 1:
         user_accounts += (
-            f'<a href="/account/{e(user.username)}">{e(user.username)}</a>',
-            " - ",
-            '<a href="/?user={e(user.username)}#filters">Their spots</a>',
+            f'<a href="/account/{e(user.username)}">{e(user.username)}</a>'
+            + " - "
+            + f'<a href="/?user={e(user.username)}#filters">Their spots</a>'
         )
         user_accounts += "<br>"
     else:
