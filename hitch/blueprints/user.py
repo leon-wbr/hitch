@@ -104,10 +104,16 @@ def claim_review(review_id: int):
 
     if current_user.is_anonymous:
         return redirect("/login")
-    
+
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("create table if not exists claims (id integer primary key, user_id integer, review_id integer, timestamp timestamp default current_timestamp)")
+    cursor.execute(
+        "create table if not exists claims"
+        + "(id integer primary key, "
+        + "user_id integer, "
+        + "review_id integer, "
+        + "timestamp timestamp default current_timestamp)"
+    )
 
     # Insert or replace existing entry
     query_result = cursor.execute(f"select user_id from points where id = {review_id}").fetchall()
@@ -128,6 +134,3 @@ def claim_review(review_id: int):
     conn.close()
 
     return reply
-    
-
-    
