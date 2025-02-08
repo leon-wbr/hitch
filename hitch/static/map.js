@@ -260,6 +260,9 @@ function setupFilterEventListeners() {
   distanceFilter.addEventListener("input", () =>
     setQueryParameter("mindistance", distanceFilter.value)
   );
+  tripFilter.addEventListener("input", () =>
+    setQueryParameter("trip", tripFilter.value)
+  );
 }
 
 // Update the direction query parameter based on knob rotation
@@ -676,6 +679,7 @@ const knobToggle = document.getElementById("knob-toggle");
 const textFilter = document.getElementById("text-filter");
 const userFilter = document.getElementById("user-filter");
 const distanceFilter = document.getElementById("distance-filter");
+const tripFilter = document.getElementById("trip-filter");
 const clearFilters = document.getElementById("clear-filters");
 
 let isDragging = false,
@@ -753,12 +757,14 @@ function applyParams() {
   textFilter.value = getQueryParameter("text");
   userFilter.value = getQueryParameter("user");
   distanceFilter.value = getQueryParameter("mindistance");
+  tripFilter.value = getQueryParameter("trip");
 
   if (
     knobToggle.checked ||
     textFilter.value ||
     userFilter.value ||
-    distanceFilter.value
+    distanceFilter.value ||
+    tripFilter.value
   ) {
     if (filterMarkerGroup) filterMarkerGroup.remove();
     if (filterDestLineGroup) filterDestLineGroup.remove();
@@ -799,6 +805,11 @@ function applyParams() {
             return true;
         }
         return false;
+      });
+    }
+    if (tripFilter.value) {
+      filterMarkers = filterMarkers.filter((x) => {
+        return x.options._row[9] == tripFilter.value;
       });
     }
     if (knobToggle.checked) {
