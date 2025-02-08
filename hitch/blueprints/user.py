@@ -5,6 +5,8 @@ from hitch.extensions import security
 from hitch.forms import UserEditForm
 from hitch.helpers import get_db
 
+REVIEWS_PER_DAY = 3
+
 user_bp = Blueprint("user", __name__)
 
 
@@ -124,12 +126,19 @@ def claim_review(review_id: int):
     elif query_result[0][0] is not None:
         reply = render_template("security/failed.html", message="Review already claimed.")
     else:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute(f"update points set user_id = {current_user.id} where id = {review_id}")
-        cursor.execute(f"insert or replace into claims (user_id, review_id) values ({current_user.id}, {review_id})")
-        conn.commit()
-        reply = redirect("/")
+        claims_today = cursor.execute(
+            f"select count(*) from claims where user_id = {current_user.id} and date(timestamp) = date('now')"
+        ).fetchall()
+        num_claims = len(claims_today[0][0])
+        if num_claims >= REVIEWS_PER_DAY:
+            reply = render_template("security/failed.html", message=f"You can only claim {REVIEWS_PER_DAY} reviews per day.")
+        else:
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute(f"update points set user_id = {current_user.id} where id = {review_id}")
+            cursor.execute(f"insert or replace into claims (user_id, review_id) values ({current_user.id}, {review_id})")
+            conn.commit()
+            reply = render_template("security/success.html", message=f"{num_claims + 1}/{REVIEWS_PER_DAY} reviews claimed today.")
 
     conn.close()
 
