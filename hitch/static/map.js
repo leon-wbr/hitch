@@ -88,6 +88,7 @@ async function loadMarkers(map) {
                   m.review_users,
                   m.dest_lats,
                   m.dest_lons,
+                  m.trip_id,
                 ],
         });
 
@@ -259,9 +260,6 @@ function setupFilterEventListeners() {
   distanceFilter.addEventListener("input", () =>
     setQueryParameter("mindistance", distanceFilter.value)
   );
-  tripFilter.addEventListener("input", () =>
-    setQueryParameter("trip", tripFilter.value)
-  );
 }
 
 // Update the direction query parameter based on knob rotation
@@ -344,7 +342,8 @@ function summaryText(row) {
     }
     Ride distance: ${
       !row[5] || Number.isNaN(row[5]) ? "-" : row[5].toFixed(0) + " km"
-    }`;
+    }
+    Trip ID: ${row[9]}`;
 }
 
 function handleMarkerClick(marker, point, e) {
@@ -677,7 +676,6 @@ const knobToggle = document.getElementById("knob-toggle");
 const textFilter = document.getElementById("text-filter");
 const userFilter = document.getElementById("user-filter");
 const distanceFilter = document.getElementById("distance-filter");
-const tripFilter = document.getElementById("trip-filter");
 const clearFilters = document.getElementById("clear-filters");
 
 let isDragging = false,
@@ -760,8 +758,7 @@ function applyParams() {
     knobToggle.checked ||
     textFilter.value ||
     userFilter.value ||
-    distanceFilter.value ||
-    tripFilter.value
+    distanceFilter.value
   ) {
     if (filterMarkerGroup) filterMarkerGroup.remove();
     if (filterDestLineGroup) filterDestLineGroup.remove();
@@ -802,11 +799,6 @@ function applyParams() {
             return true;
         }
         return false;
-      });
-    }
-    if (tripFilter.value) {
-      filterMarkers = filterMarkers.filter((x) => {
-        return x.options._row[9] == tripFilter.value;
       });
     }
     if (knobToggle.checked) {

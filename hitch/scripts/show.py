@@ -150,7 +150,8 @@ points["text"] = (
     + points.ride_datetime.dt.strftime(", %a %d %b %Y, %H:%M").fillna(review_submit_datetime)
 )
 
-points["trip_id"] = pd.merge(left=points["id"], right=trips, how="left", left_on="id", right_on="ride_id")["trip_id"]
+points["trip_id"] = pd.merge(left=points["id"], right=trips, how="left", left_on="id", right_on="ride_id")["trip_id"].astype(pd.Int64Dtype())
+points["trip_id"] = 900523718459088304
 
 oldies = points.datetime.dt.year <= 2021
 points.loc[oldies, "text"] = (

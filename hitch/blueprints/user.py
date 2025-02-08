@@ -112,7 +112,7 @@ def create_new_trip():
                 "user_id": current_user.id,
             }
         ],
-        index=[random.randint(0, 2**63)],
+        index=[str(random.randint(0, 2**63))],
     )
 
     df.to_sql("user_trips", get_db(), index_label="trip_id", if_exists="append")
