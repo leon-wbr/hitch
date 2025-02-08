@@ -197,7 +197,7 @@ def trips():
     res = link + "<br>" + link1 + "<br>" + link2 + "<br>"
 
     for _, trip in current_user_trips.iterrows():
-        res += f"Trip id: {trip.trip_id}<br>"
+        res += f"Trip id: <a href='/?trip={trip.trip_id}#filters'>{trip.trip_id}</a><br>"
         for _, row in pd.read_sql(f"select * from trips where trip_id = {trip.trip_id}", get_db()).iterrows():
             res += f"____Ride id: {row.ride_id}<br>"
 
