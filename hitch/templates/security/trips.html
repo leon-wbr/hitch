@@ -1,0 +1,28 @@
+{% extends "security/base.html" %}
+
+
+{% set title = Your_Trips %}
+
+{% block content %}
+<style>
+.overlay {
+    max-width: 1800px !important;  /* Override the max-width */
+    width: 90vw !important;  /* Adjust the width as needed */
+}
+</style>
+<h1>Your Trips</h1>
+<a href='/create-new-trip'>Create a new trip</a><br>
+<a href='/create-trips'>Create trips</a><br>
+<a href='/edit-review'>Edit a review</a><br>
+
+
+{% for trip in trips %}
+    <p>Trip: <a href="/?trip={{ trip[0] }}#filters">{{ trip[1] }}</a></p>
+    {% for ride_id in trip[2].split(',') %}
+        <p>____Ride id: {{ ride_id }}</p>
+    {% endfor %}
+{% endfor %}
+
+{{ reviews|safe }}
+
+{% endblock %}

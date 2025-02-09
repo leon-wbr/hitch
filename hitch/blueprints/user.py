@@ -106,6 +106,7 @@ def show_account(username, is_me: bool = False):
 
 @user_bp.route("/create-trips", methods=["GET", "POST"])
 def create_trips():
+    """Creates new trips where reviews from the same day become a trip."""
     if current_user.is_anonymous:
         return redirect("/login")
 
@@ -159,7 +160,10 @@ def create_new_trip():
     trip_id = random.randint(0, 2**63)
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("insert or replace into trips (trip_id, user_id, name) values (?, ?, ?)", (trip_id, current_user.id, trip_id))
+    cursor.execute(
+        "insert or replace into trips (trip_id, user_id, name) values (?, ?, ?)",
+        (trip_id, current_user.id, f"Trip with ID {trip_id}"),
+    )
     conn.commit()
     conn.close()
 
@@ -185,25 +189,26 @@ def trips():
                     user_id INTEGER,
                     name TEXT)""")
 
-    trips = pd.read_sql("select * from ride_trips", get_db())
+    query = f"""SELECT id, datetime, ride_datetime, country, lat, lon, dest_lat, dest_lon, rating, signal, wait, comment
+    FROM points p
+    LEFT JOIN ride_trips rt ON p.id = rt.ride_id
+    WHERE (p.nickname = '{current_user.username}' OR p.user_id = {current_user.id})
+    ORDER BY p.datetime DESC;"""
 
-    current_user_reviews = pd.read_sql(f"select * from points where nickname = '{current_user.username}'", get_db())
-    current_user_reviews["trip_id"] = pd.merge(
-        left=current_user_reviews["id"], right=trips, how="left", left_on="id", right_on="ride_id"
-    )["trip_id"].astype(pd.Int64Dtype())
-    current_user_trips = pd.read_sql(f"select * from trips where user_id = {current_user.id}", get_db())
+    current_user_reviews = pd.read_sql(query, get_db())
 
-    link = "<a href='/create-new-trip'>Create a new trip</a>"
-    link1 = "<a href='/create-trips'>Create trips</a>"
-    link2 = "<a href='/edit-review'>Edit a review</a>"
-    res = link + "<br>" + link1 + "<br>" + link2 + "<br>"
+    query = f"""SELECT
+        t.trip_id AS trip_id,
+        t.name AS trip_name,
+        GROUP_CONCAT(rt.ride_id) AS ride_ids
+    from trips t left join ride_trips rt on t.trip_id = rt.trip_id 
+    where t.user_id = {current_user.id}
+        and rt.ride_id is not null
+    group by t.trip_id;"""
 
-    for _, trip in current_user_trips.iterrows():
-        res += f"Trip id: <a href='/?trip={trip.trip_id}#filters'>{trip['name']}</a><br>"
-        for _, row in pd.read_sql(f"select * from ride_trips where trip_id = {trip.trip_id}", get_db()).iterrows():
-            res += f"____Ride id: {row.ride_id}<br>"
+    trips = cursor.execute(query).fetchall()
 
-    return res + current_user_reviews.to_html()
+    return render_template("security/trips.html", trips=trips, reviews=current_user_reviews.to_html())
 
 
 @user_bp.route("/edit-review", methods=["GET", "POST"])
