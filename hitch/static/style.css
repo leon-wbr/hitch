@@ -500,9 +500,6 @@ ul.no-style {
   font-weight: normal;
   display: inline;
 }
-#distance-filter {
-  width: 100%;
-}
-#trip-filter {
+#filter-input {
   width: 100%;
 }
