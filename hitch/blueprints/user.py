@@ -6,7 +6,7 @@ from flask import Blueprint, current_app, jsonify, redirect, render_template
 from flask_security import current_user
 
 from hitch.extensions import security
-from hitch.forms import ReviewForm, UserEditForm
+from hitch.forms import NewTripForm, ReviewForm, UserEditForm
 from hitch.helpers import get_db
 
 logging.basicConfig(level=logging.INFO)
@@ -151,23 +151,32 @@ def create_trips():
     return redirect("/trips")
 
 
-@user_bp.route("/create-new-trip", methods=["GET", "POST"])
-def create_new_trip():
+@user_bp.route("/new-trip", methods=["GET", "POST"])
+def new_trip():
     """Endpoint to create a new trip."""
+
     if current_user.is_anonymous:
         return jsonify({"error": "You need to be logged in to create a trip."})
 
-    trip_id = random.randint(0, 2**63)
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        "insert or replace into trips (trip_id, user_id, name) values (?, ?, ?)",
-        (trip_id, current_user.id, f"Trip with ID {trip_id}"),
-    )
-    conn.commit()
-    conn.close()
+    form = NewTripForm()
 
-    return redirect("/trips")
+    if form.validate_on_submit():
+        trip_name = form.trip_name.data
+        trip_id = random.randint(0, 2**63)
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "insert or replace into trips (trip_id, user_id, name) values (?, ?, ?)",
+            (trip_id, current_user.id, trip_name),
+        )
+        conn.commit()
+        conn.close()
+
+        return redirect("/trips")
+
+    form.trip_name.data = None
+
+    return render_template("security/new_trip.html", form=form)
 
 
 @user_bp.route("/trips", methods=["GET", "POST"])
@@ -203,7 +212,6 @@ def trips():
         GROUP_CONCAT(rt.ride_id) AS ride_ids
     from trips t left join ride_trips rt on t.trip_id = rt.trip_id 
     where t.user_id = {current_user.id}
-        and rt.ride_id is not null
     group by t.trip_id;"""
 
     trips = cursor.execute(query).fetchall()
@@ -211,8 +219,8 @@ def trips():
     return render_template("security/trips.html", trips=trips, reviews=current_user_reviews.to_html())
 
 
-@user_bp.route("/edit-review/<trip_id>", methods=["GET", "POST"])
-def edit_review(trip_id: int):
+@user_bp.route("/add-review-to-trip/<trip_id>", methods=["GET", "POST"])
+def add_review_to_trip(trip_id: int):
     form = ReviewForm()
 
     conn = get_db()
@@ -242,4 +250,4 @@ def edit_review(trip_id: int):
     trip_name = cursor.execute("SELECT name FROM trips WHERE trip_id = ?", (trip_id,)).fetchone()[0]
     conn.close()
 
-    return render_template("security/edit_review.html", form=form, trip_name=trip_name, trip_id=trip_id)
+    return render_template("security/add_review_to_trip.html", form=form, trip_name=trip_name, trip_id=trip_id)

@@ -11,15 +11,19 @@
 }
 </style>
 <h1>Your Trips</h1>
-<a href='/create-new-trip'>Create a new trip</a><br>
-<a href='/create-trips'>Create trips</a><br>
+<a href='/new-trip'>Create a new trip</a><br>
+<a href='/create-trips'>Create trips automatically</a><br>
 
 
 {% for trip in trips %}
-    <p>Trip: <a href="/?trip={{ trip[0] }}#filters">{{ trip[1] }}</a><a href="/edit-review/{{trip[0]}}">Add a review to this trip</a></p>
-    {% for ride_id in trip[2].split(',') %}
-        <p>____Ride id: {{ ride_id }}</p>
-    {% endfor %}
+    <p><b>Trip:</b> <a href="/?trip={{ trip[0] }}#filters">{{ trip[1] }}</a><a href="/add-review-to-trip/{{trip[0]}}">Add a review to this trip</a></p>
+    {% if trip[2] is not none %}
+        {% for ride_id in trip[2].split(',') %}
+            <p>____Ride id: {{ ride_id }}</p>
+        {% endfor %}
+    {% else %}
+        <p>No rides in this trip</p>
+    {% endif %}
 {% endfor %}
 
 {{ reviews|safe }}

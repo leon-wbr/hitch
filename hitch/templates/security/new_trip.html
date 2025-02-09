@@ -1,0 +1,12 @@
+{% extends "security/base.html" %}
+
+{% set title = "New Trip" %}
+
+{% block content %}
+<h1>New Trip</h1>
+<form method="POST" action="{{ url_for('user.new_trip') }}">
+    {{ form.csrf_token }}
+    <p>{{ form.trip_name.label }} {{ form.trip_name() }}</p>
+    {{ form.submit }}
+</form>
+{% endblock %}

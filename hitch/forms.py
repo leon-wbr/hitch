@@ -44,3 +44,8 @@ class UserEditForm(FlaskForm):
 class ReviewForm(FlaskForm):
     ride_id = IntegerField("Ride ID", validators=[Optional()])
     submit = SubmitField("Submit")
+
+
+class NewTripForm(FlaskForm):
+    trip_name = StringField("Trip Name")
+    submit = SubmitField("Submit")
