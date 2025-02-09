@@ -108,54 +108,46 @@ def show_account(username, is_me: bool = False):
 def create_trips():
     if current_user.is_anonymous:
         return redirect("/login")
-    
-    trips = pd.read_sql("select * from trips", get_db())
-    reviews = pd.read_sql("select * from points where nickname = 'Chris9012'", get_db())
-    reviews["trip_id"] = pd.merge(
-        left=reviews["id"], right=trips, how="left", left_on="id", right_on="ride_id"
-    )["trip_id"].astype(pd.Int64Dtype())
 
-    reviews = reviews[reviews["trip_id"].isnull()]
-    reviews = reviews[reviews["ride_datetime"].notnull()]
-    reviews = reviews.sort_values(by="ride_datetime", ascending=True)
+    query = """
+    SELECT 
+        DATE(p.ride_datetime) AS date, 
+        GROUP_CONCAT(p.id) AS point_ids, 
+        COUNT(*) AS total_rides
+    FROM points p
+    LEFT JOIN ride_trips rt ON p.id = rt.ride_id
+    WHERE (p.nickname = ? OR p.user_id = ?)
+        AND rt.trip_id IS NULL
+        AND date IS NOT NULL
+    GROUP BY date
+    ORDER BY date ASC;
+    """
 
-    # heuristic for trip: rides on the same day are part of the same trip
-    reviews["ride_datetime"] = pd.to_datetime(reviews["ride_datetime"])
-    reviews["date"] = reviews['ride_datetime'].dt.date
-    day_groups = reviews.groupby("date")
+    conn = get_db()
+    cursor = conn.cursor()
+    day_groups = cursor.execute(query, (current_user.username, current_user.id)).fetchall()
+
     if len(day_groups) > 0:
-        conn = get_db()
-        cursor = conn.cursor()
-        for trip in day_groups:
-            trip_df = trip[1]
-            if len(trip_df) < 2:
+        for new_trip in day_groups:
+            date, ride_ids, total_rides = new_trip
+            if total_rides < 2:
                 continue
             trip_id = random.randint(0, 2**63)
-            logger.info(f"Creating trip {trip_id} for user {current_user.id}")
-            df = pd.DataFrame(
-                [
-                    {
-                        "user_id": current_user.id,
-                    }
-                ],
-                index=[trip_id],
+            logger.info(f"Creating trip {trip_id} for user {current_user.id} on {date}")
+            cursor.execute(
+                "INSERT OR REPLACE INTO trips (trip_id, user_id, name) VALUES (?, ?, ?)",
+                (trip_id, current_user.id, f"Trip on {date}"),
             )
 
-            df.to_sql("user_trips", get_db(), index_label="trip_id", if_exists="append")
-
-            for _, ride in trip_df.iterrows():
-               
-
+            for ride_id in ride_ids.split(","):
                 # Insert or replace existing entry
-                cursor.execute("INSERT OR REPLACE INTO trips (ride_id, trip_id) VALUES (?, ?)", (ride["id"], trip_id))
+                cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
 
-                conn.commit()
+            conn.commit()
 
-        conn.close()
+    conn.close()
 
     return redirect("/trips")
-
-
 
 
 @user_bp.route("/create-new-trip", methods=["GET", "POST"])
@@ -164,16 +156,13 @@ def create_new_trip():
     if current_user.is_anonymous:
         return jsonify({"error": "You need to be logged in to create a trip."})
 
-    df = pd.DataFrame(
-        [
-            {
-                "user_id": current_user.id,
-            }
-        ],
-        index=[str(random.randint(0, 2**63))],
-    )
+    trip_id = random.randint(0, 2**63)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("insert or replace into trips (trip_id, user_id, name) values (?, ?, ?)", (trip_id, current_user.id, trip_id))
+    conn.commit()
+    conn.close()
 
-    df.to_sql("user_trips", get_db(), index_label="trip_id", if_exists="append")
     return redirect("/trips")
 
 
@@ -182,14 +171,27 @@ def trips():
     """Shows a list of the rewievs of the user."""
     if current_user.is_anonymous:
         return redirect("/login")
-    
-    trips = pd.read_sql("select * from trips", get_db())
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS ride_trips (
+                    ride_id INTEGER UNIQUE,
+                    trip_id INTEGER)""")
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS trips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    trip_id INTEGER UNIQUE,
+                    user_id INTEGER,
+                    name TEXT)""")
+
+    trips = pd.read_sql("select * from ride_trips", get_db())
 
     current_user_reviews = pd.read_sql(f"select * from points where nickname = '{current_user.username}'", get_db())
     current_user_reviews["trip_id"] = pd.merge(
         left=current_user_reviews["id"], right=trips, how="left", left_on="id", right_on="ride_id"
     )["trip_id"].astype(pd.Int64Dtype())
-    current_user_trips = pd.read_sql(f"select * from user_trips where user_id = {current_user.id}", get_db())
+    current_user_trips = pd.read_sql(f"select * from trips where user_id = {current_user.id}", get_db())
 
     link = "<a href='/create-new-trip'>Create a new trip</a>"
     link1 = "<a href='/create-trips'>Create trips</a>"
@@ -197,8 +199,8 @@ def trips():
     res = link + "<br>" + link1 + "<br>" + link2 + "<br>"
 
     for _, trip in current_user_trips.iterrows():
-        res += f"Trip id: <a href='/?trip={trip.trip_id}#filters'>{trip.trip_id}</a><br>"
-        for _, row in pd.read_sql(f"select * from trips where trip_id = {trip.trip_id}", get_db()).iterrows():
+        res += f"Trip id: <a href='/?trip={trip.trip_id}#filters'>{trip['name']}</a><br>"
+        for _, row in pd.read_sql(f"select * from ride_trips where trip_id = {trip.trip_id}", get_db()).iterrows():
             res += f"____Ride id: {row.ride_id}<br>"
 
     return res + current_user_reviews.to_html()
@@ -214,12 +216,8 @@ def edit_review():
         conn = get_db()
         cursor = conn.cursor()
 
-        cursor.execute("""CREATE TABLE IF NOT EXISTS trips (
-                    ride_id INTEGER UNIQUE,
-                    trip_id INTEGER)""")
-
         # Insert or replace existing entry
-        cursor.execute("INSERT OR REPLACE INTO trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
+        cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
 
         conn.commit()
         conn.close()
