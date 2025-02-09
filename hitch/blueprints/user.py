@@ -4,8 +4,7 @@ from flask_security import current_user
 from hitch.extensions import security
 from hitch.forms import UserEditForm
 from hitch.helpers import get_db
-
-REVIEWS_PER_DAY = 3
+from hitch.settings import MAX_CLAIMS_PER_DAY
 
 user_bp = Blueprint("user", __name__)
 
@@ -120,25 +119,32 @@ def claim_review(review_id: int):
     # Insert or replace existing entry
     query_result = cursor.execute(f"select user_id from points where id = {review_id}").fetchall()
     if len(query_result) == 0:
-        reply = render_template("security/failed.html", message="Review not found.")
-    elif len(query_result) > 1:
-        reply = render_template("security/failed.html", message="Multiple reviews found.")
+        error_message = "Review not found."
+    if len(query_result) > 1:
+        error_message = "Multiple reviews found."
     elif query_result[0][0] is not None:
-        reply = render_template("security/failed.html", message="Review already claimed.")
+        error_message = "Review already claimed."
     else:
-        claims_today = cursor.execute(
-            f"select count(*) from claims where user_id = {current_user.id} and date(timestamp) = date('now')"
-        ).fetchall()
-        num_claims = len(claims_today[0][0])
-        if num_claims >= REVIEWS_PER_DAY:
-            reply = render_template("security/failed.html", message=f"You can only claim {REVIEWS_PER_DAY} reviews per day.")
-        else:
-            conn = get_db()
-            cursor = conn.cursor()
-            cursor.execute(f"update points set user_id = {current_user.id} where id = {review_id}")
-            cursor.execute(f"insert or replace into claims (user_id, review_id) values ({current_user.id}, {review_id})")
-            conn.commit()
-            reply = render_template("security/success.html", message=f"{num_claims + 1}/{REVIEWS_PER_DAY} reviews claimed today.")
+        error_message = None
+
+    if error_message:
+        conn.close()
+        return render_template("security/failed.html", message=error_message)
+
+    claims_today = cursor.execute(
+        f"select count(*) from claims where user_id = {current_user.id} and date(timestamp) = date('now')"
+    ).fetchone()
+    num_claims = claims_today[0] if claims_today else 0
+    if num_claims >= MAX_CLAIMS_PER_DAY:
+        reply = render_template("security/failed.html", message=f"You can only claim {MAX_CLAIMS_PER_DAY} reviews per day.")
+    else:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(f"update points set user_id = {current_user.id} where id = {review_id}")
+        cursor.execute(f"insert or replace into claims (user_id, review_id) values ({current_user.id}, {review_id})")
+        conn.commit()
+        message = f"{num_claims + 1}/{MAX_CLAIMS_PER_DAY} reviews claimed today."
+        reply = render_template("security/success.html", message=message)
 
     conn.close()
 
