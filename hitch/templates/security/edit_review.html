@@ -3,7 +3,8 @@
 {% set title = "Edit Trips" %}
 
 {% block content %}
-<h1>Add a review to your trip</h1>
+<h1>Add a review to your trip: {{trip_name}}</h1>
+Copy the ride id from the <a href="/trips">trips page</a> to add it to this trip.
 <form method="POST" action="{{ url_for('user.edit_review', trip_id=trip_id) }}">
     {{ form.csrf_token }}
     <p>{{ form.ride_id.label }} {{ form.ride_id() }}</p>

@@ -215,11 +215,11 @@ def trips():
 def edit_review(trip_id: int):
     form = ReviewForm()
 
+    conn = get_db()
+    cursor = conn.cursor()
+
     if form.validate_on_submit():
         ride_id = form.ride_id.data
-        conn = get_db()
-        cursor = conn.cursor()
-
         user_id_for_trip = cursor.execute("SELECT user_id FROM trips WHERE trip_id = ?", (trip_id,)).fetchone()
         if user_id_for_trip is None:
             return "Trip does not exist."
@@ -236,9 +236,10 @@ def edit_review(trip_id: int):
         cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
 
         conn.commit()
-        conn.close()
         return redirect("/trips")
 
     form.ride_id.data = None
+    trip_name = cursor.execute("SELECT name FROM trips WHERE trip_id = ?", (trip_id,)).fetchone()[0]
+    conn.close()
 
-    return render_template("security/edit_review.html", form=form, trip_id=trip_id)
+    return render_template("security/edit_review.html", form=form, trip_name=trip_name, trip_id=trip_id)
