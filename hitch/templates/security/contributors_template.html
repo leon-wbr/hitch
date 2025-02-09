@@ -1,0 +1,40 @@
+{% extends "security/base.html" %}
+
+
+{% set title = Contributors %}
+
+{% block content %}
+
+<style>
+    .overlay {
+        max-width: 1000px !important;
+        /* Override the max-width */
+        width: 90vw !important;
+        /* Adjust the width as needed */
+    }
+
+    .container {
+        display: flex;
+        justify-content: space-between;
+        /* Distribute space between items */
+        padding: 10px;
+    }
+
+    .left,
+    .right {
+        width: 45%;
+        /* Adjust width as needed */
+    }
+</style>
+<h1>Contributors</h1>
+<div class="container">
+    <div class="left">
+        <h4>Overall contributions</h4>
+        {{ overall_contributions|safe }}
+    </div>
+    <div class="right">
+        <h4>Contributions this month</h4>
+        {{ monthly_contributions|safe }}
+    </div>
+</div>
+{% endblock %}
