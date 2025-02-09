@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pycountry
 from flask_wtf import FlaskForm
-from wtforms import FieldList, IntegerField, SelectField, StringField, SubmitField
+from wtforms import IntegerField, SelectField, StringField, SubmitField
 from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
 
@@ -43,5 +43,4 @@ class UserEditForm(FlaskForm):
 
 class ReviewForm(FlaskForm):
     ride_id = IntegerField("Ride ID", validators=[Optional()])
-    trip_id = IntegerField("Trip ID", validators=[Optional()])
     submit = SubmitField("Submit")

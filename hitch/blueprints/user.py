@@ -211,13 +211,12 @@ def trips():
     return render_template("security/trips.html", trips=trips, reviews=current_user_reviews.to_html())
 
 
-@user_bp.route("/edit-review", methods=["GET", "POST"])
-def edit_review():
+@user_bp.route("/edit-review/<trip_id>", methods=["GET", "POST"])
+def edit_review(trip_id: int):
     form = ReviewForm()
 
     if form.validate_on_submit():
         ride_id = form.ride_id.data
-        trip_id = form.trip_id.data
         conn = get_db()
         cursor = conn.cursor()
 
@@ -228,7 +227,6 @@ def edit_review():
         conn.close()
         return redirect("/trips")
 
-    form.ride_id.data = 1
-    form.trip_id.data = 1
+    form.ride_id.data = None
 
-    return render_template("security/edit_review.html", form=form)
+    return render_template("security/edit_review.html", form=form, trip_id=trip_id)
