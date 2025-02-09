@@ -6,7 +6,7 @@ from flask import Blueprint, current_app, jsonify, redirect, render_template
 from flask_security import current_user
 
 from hitch.extensions import security
-from hitch.forms import NewTripForm, ReviewForm, UserEditForm
+from hitch.forms import AddReviewToTripForm, NewTripForm, UserEditForm
 from hitch.helpers import get_db
 
 logging.basicConfig(level=logging.INFO)
@@ -110,6 +110,9 @@ def create_trips():
     if current_user.is_anonymous:
         return redirect("/login")
 
+    conn = get_db()
+    cursor = conn.cursor()
+
     query = """
     SELECT 
         DATE(p.ride_datetime) AS date, 
@@ -124,8 +127,6 @@ def create_trips():
     ORDER BY date ASC;
     """
 
-    conn = get_db()
-    cursor = conn.cursor()
     day_groups = cursor.execute(query, (current_user.username, current_user.id)).fetchall()
 
     if len(day_groups) > 0:
@@ -141,7 +142,6 @@ def create_trips():
             )
 
             for ride_id in ride_ids.split(","):
-                # Insert or replace existing entry
                 cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
 
             conn.commit()
@@ -156,7 +156,7 @@ def new_trip():
     """Endpoint to create a new trip."""
 
     if current_user.is_anonymous:
-        return jsonify({"error": "You need to be logged in to create a trip."})
+        return redirect("/login")
 
     form = NewTripForm()
 
@@ -221,7 +221,7 @@ def trips():
 
 @user_bp.route("/add-review-to-trip/<trip_id>", methods=["GET", "POST"])
 def add_review_to_trip(trip_id: int):
-    form = ReviewForm()
+    form = AddReviewToTripForm()
 
     conn = get_db()
     cursor = conn.cursor()
@@ -240,7 +240,6 @@ def add_review_to_trip(trip_id: int):
         elif user_for_ride[0] != current_user.username and user_for_ride[1] != current_user.id:
             return "You are not allowed to edit this ride."
 
-        # Insert or replace existing entry
         cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
 
         conn.commit()
