@@ -35,7 +35,7 @@ except pd.errors.DatabaseError as err:
     logger.error("Failed to fetch users from database")
     raise Exception("Run server.py to create the user table") from err
 
-trips = pd.read_sql("select * from trips", get_db())
+trips = pd.read_sql("select * from ride_trips", get_db())
 
 logger.info(f"{len(points)} points currently")
 
