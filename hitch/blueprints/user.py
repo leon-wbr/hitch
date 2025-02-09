@@ -220,6 +220,18 @@ def edit_review(trip_id: int):
         conn = get_db()
         cursor = conn.cursor()
 
+        user_id_for_trip = cursor.execute("SELECT user_id FROM trips WHERE trip_id = ?", (trip_id,)).fetchone()
+        if user_id_for_trip is None:
+            return "Trip does not exist."
+        elif user_id_for_trip[0] != current_user.id:
+            return "You are not allowed to edit this trip."
+
+        user_for_ride = cursor.execute("SELECT nickname, user_id FROM points WHERE id = ?", (ride_id,)).fetchone()
+        if user_for_ride is None:
+            return "Ride does not exist."
+        elif user_for_ride[0] != current_user.username and user_for_ride[1] != current_user.id:
+            return "You are not allowed to edit this ride."
+
         # Insert or replace existing entry
         cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
 
