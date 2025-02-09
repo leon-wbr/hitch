@@ -35,6 +35,8 @@ except pd.errors.DatabaseError as err:
     logger.error("Failed to fetch users from database")
     raise Exception("Run server.py to create the user table") from err
 
+trips = pd.read_sql("select * from ride_trips", get_db())
+
 logger.info(f"{len(points)} points currently")
 
 # merging and transforming data
@@ -148,6 +150,10 @@ points["text"] = (
     + points.ride_datetime.dt.strftime(", %a %d %b %Y, %H:%M").fillna(review_submit_datetime)
 )
 
+points["trip_id"] = pd.merge(left=points["id"], right=trips, how="left", left_on="id", right_on="ride_id")["trip_id"].astype(
+    pd.Int64Dtype()
+)
+
 oldies = points.datetime.dt.year <= 2021
 points.loc[oldies, "text"] = (
     e(comment_nl[oldies]) + "―" + points.loc[oldies, "user_link"] + points[oldies].datetime.dt.strftime(", %B %Y").fillna("")
@@ -165,6 +171,8 @@ places["review_users"] = points.dropna(subset=["text", "hitchhiker"]).groupby(["
 
 places["dest_lats"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lat.apply(list)
 places["dest_lons"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby(["lat", "lon"]).dest_lon.apply(list)
+
+places["trip_id"] = points.dropna(subset=["trip_id"]).groupby(["lat", "lon"]).trip_id.unique().apply(lambda x: x[0])
 
 places.reset_index(inplace=True)
 places.sort_values("rating", inplace=True, ascending=False)
@@ -193,6 +201,7 @@ point_columns = [
     "review_users",
     "dest_lats",
     "dest_lons",
+    "trip_id",
 ]
 
 logger.info("Generating JSON data files")

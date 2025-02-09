@@ -39,3 +39,13 @@ class UserEditForm(FlaskForm):
     hitchwiki_username = StringField("Hitchwiki Username", validators=[Optional()], default=None)
     trustroots_username = StringField("Trustroots Username", validators=[Optional()], default=None)
     submit = SubmitField("Submit")
+
+
+class AddReviewToTripForm(FlaskForm):
+    ride_id = IntegerField("Ride ID", validators=[Optional()])
+    submit = SubmitField("Submit")
+
+
+class NewTripForm(FlaskForm):
+    trip_name = StringField("Trip Name")
+    submit = SubmitField("Submit")

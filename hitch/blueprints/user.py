@@ -1,8 +1,16 @@
+import logging
+import random
+
+import pandas as pd
 from flask import Blueprint, current_app, jsonify, redirect, render_template
 from flask_security import current_user
 
 from hitch.extensions import security
-from hitch.forms import UserEditForm
+from hitch.forms import AddReviewToTripForm, NewTripForm, UserEditForm
+from hitch.helpers import get_db
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 user_bp = Blueprint("user", __name__)
 
@@ -94,3 +102,151 @@ def show_account(username, is_me: bool = False):
         return "User not found."
 
     return render_template("security/account.html", user=user, is_me=is_me)
+
+
+@user_bp.route("/create-trips", methods=["GET", "POST"])
+def create_trips():
+    """Creates new trips where reviews from the same day become a trip."""
+    if current_user.is_anonymous:
+        return redirect("/login")
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT 
+        DATE(p.ride_datetime) AS date, 
+        GROUP_CONCAT(p.id) AS point_ids, 
+        COUNT(*) AS total_rides
+    FROM points p
+    LEFT JOIN ride_trips rt ON p.id = rt.ride_id
+    WHERE (p.nickname = ? OR p.user_id = ?)
+        AND rt.trip_id IS NULL
+        AND date IS NOT NULL
+    GROUP BY date
+    ORDER BY date ASC;
+    """
+
+    day_groups = cursor.execute(query, (current_user.username, current_user.id)).fetchall()
+
+    if len(day_groups) > 0:
+        for new_trip in day_groups:
+            date, ride_ids, total_rides = new_trip
+            if total_rides < 2:
+                continue
+            trip_id = random.randint(0, 2**63)
+            logger.info(f"Creating trip {trip_id} for user {current_user.id} on {date}")
+            cursor.execute(
+                "INSERT OR REPLACE INTO trips (trip_id, user_id, name) VALUES (?, ?, ?)",
+                (trip_id, current_user.id, f"Trip on {date}"),
+            )
+
+            for ride_id in ride_ids.split(","):
+                cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
+
+            conn.commit()
+
+    conn.close()
+
+    return redirect("/trips")
+
+
+@user_bp.route("/new-trip", methods=["GET", "POST"])
+def new_trip():
+    """Endpoint to create a new trip."""
+
+    if current_user.is_anonymous:
+        return redirect("/login")
+
+    form = NewTripForm()
+
+    if form.validate_on_submit():
+        trip_name = form.trip_name.data
+        trip_id = random.randint(0, 2**63)
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "insert or replace into trips (trip_id, user_id, name) values (?, ?, ?)",
+            (trip_id, current_user.id, trip_name),
+        )
+        conn.commit()
+        conn.close()
+
+        return redirect("/trips")
+
+    form.trip_name.data = None
+
+    return render_template("security/new_trip.html", form=form)
+
+
+@user_bp.route("/trips", methods=["GET", "POST"])
+def trips():
+    """Shows a list of the rewievs of the user."""
+    if current_user.is_anonymous:
+        return redirect("/login")
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS ride_trips (
+                    ride_id INTEGER UNIQUE,
+                    trip_id INTEGER)""")
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS trips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    trip_id INTEGER UNIQUE,
+                    user_id INTEGER,
+                    name TEXT)""")
+
+    query = f"""SELECT id, datetime, ride_datetime, country, lat, lon, dest_lat, dest_lon, rating, signal, wait, comment
+    FROM points p
+    LEFT JOIN ride_trips rt ON p.id = rt.ride_id
+    WHERE (p.nickname = '{current_user.username}' OR p.user_id = {current_user.id})
+    ORDER BY p.datetime DESC;"""
+
+    current_user_reviews = pd.read_sql(query, get_db())
+
+    query = f"""SELECT
+        t.trip_id AS trip_id,
+        t.name AS trip_name,
+        GROUP_CONCAT(rt.ride_id) AS ride_ids
+    from trips t left join ride_trips rt on t.trip_id = rt.trip_id 
+    where t.user_id = {current_user.id}
+    group by t.trip_id;"""
+
+    trips = cursor.execute(query).fetchall()
+
+    return render_template("security/trips.html", trips=trips, reviews=current_user_reviews.to_html())
+
+
+@user_bp.route("/add-review-to-trip/<trip_id>", methods=["GET", "POST"])
+def add_review_to_trip(trip_id: int):
+    form = AddReviewToTripForm()
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if form.validate_on_submit():
+        ride_id = form.ride_id.data
+        user_id_for_trip = cursor.execute("SELECT user_id FROM trips WHERE trip_id = ?", (trip_id,)).fetchone()
+        if user_id_for_trip is None:
+            return "Trip does not exist."
+        elif user_id_for_trip[0] != current_user.id:
+            return "You are not allowed to edit this trip."
+
+        user_for_ride = cursor.execute("SELECT nickname, user_id FROM points WHERE id = ?", (ride_id,)).fetchone()
+        if user_for_ride is None:
+            return "Ride does not exist."
+        elif user_for_ride[0] != current_user.username and user_for_ride[1] != current_user.id:
+            return "You are not allowed to edit this ride."
+
+        cursor.execute("INSERT OR REPLACE INTO ride_trips (ride_id, trip_id) VALUES (?, ?)", (ride_id, trip_id))
+
+        conn.commit()
+        return redirect("/trips")
+
+    form.ride_id.data = None
+    trip_name = cursor.execute("SELECT name FROM trips WHERE trip_id = ?", (trip_id,)).fetchone()[0]
+    conn.close()
+
+    return render_template("security/add_review_to_trip.html", form=form, trip_name=trip_name, trip_id=trip_id)
