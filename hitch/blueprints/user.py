@@ -4,7 +4,6 @@ from flask_security import current_user
 from hitch.extensions import security
 from hitch.forms import UserEditForm
 from hitch.helpers import get_db
-from hitch.settings import MAX_CLAIMS_PER_DAY
 
 user_bp = Blueprint("user", __name__)
 
@@ -135,15 +134,15 @@ def claim_review(review_id: int):
         f"select count(*) from claims where user_id = {current_user.id} and date(timestamp) = date('now')"
     ).fetchone()
     num_claims = claims_today[0] if claims_today else 0
-    if num_claims >= MAX_CLAIMS_PER_DAY:
-        reply = render_template("security/failed.html", message=f"You can only claim {MAX_CLAIMS_PER_DAY} reviews per day.")
+    if num_claims >= current_app.config["MAX_CLAIMS_PER_DAY"]:
+        reply = render_template(
+            "security/failed.html", message=f"You can only claim {current_app.config['MAX_CLAIMS_PER_DAY']} reviews per day."
+        )
     else:
-        conn = get_db()
-        cursor = conn.cursor()
         cursor.execute(f"update points set user_id = {current_user.id} where id = {review_id}")
         cursor.execute(f"insert or replace into claims (user_id, review_id) values ({current_user.id}, {review_id})")
         conn.commit()
-        message = f"{num_claims + 1}/{MAX_CLAIMS_PER_DAY} reviews claimed today."
+        message = f"{num_claims + 1}/{current_app.config['MAX_CLAIMS_PER_DAY']} reviews claimed today."
         reply = render_template("security/success.html", message=message)
 
     conn.close()

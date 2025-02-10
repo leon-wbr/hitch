@@ -8,12 +8,11 @@ baseDir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 # SQLite URI compatible
 sql_prefix = "sqlite:///" if sys.platform.startswith("win") else "sqlite:////"
 
-MAX_CLAIMS_PER_DAY = 10
-
 
 class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key")
     EMAIL = os.getenv("EMAIL", "info@hitchmap.com")
+    MAX_CLAIMS_PER_DAY = os.getenv("MAX_CLAIMS_PER_DAY", 10)
 
     # User Config
     SECURITY_PASSWORD_HASH = os.getenv("SECURITY_PASSWORD_HASH", "argon2")
